@@ -4,8 +4,10 @@ UMS3 ums3;
 
 uint32_t led_cycle_count = 0;
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
+  delay(500); // Wait for Serial to be ready
 
   // Initialize all board peripherals, call this first
   ums3.begin();
@@ -20,19 +22,22 @@ void setup() {
 
 int color = 0;
 
-void loop() {
+void loop()
+{
   // colorWheel cycles red, orange, ..., back to red at 256
   ums3.setPixelColor(UMS3::colorWheel(color));
   color++;
 
   // On the feathers3, toggle the LED twice per cycle
 #ifdef ARDUINO_FEATHERS3
-  if (color % 128 == 0) {
+  if (color % 128 == 0)
+  {
     ums3.toggleBlueLED();
   }
 #endif
 
-  if (color % 255 == 0) {
+  if (color % 255 == 0)
+  {
     Serial.printf("LED cycle #%d\n", ++led_cycle_count);
   }
 
