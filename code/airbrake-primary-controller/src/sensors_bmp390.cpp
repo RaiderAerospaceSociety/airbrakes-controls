@@ -1,0 +1,83 @@
+// BMP390 task implementation
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+#include <Adafruit_BMP3XX.h>
+
+#include "app_config.h"
+#include "logging.h"
+#include "bus.h"
+#include "pins.h"
+#include "sensors_bmp390.h"
+
+static Adafruit_BMP3XX s_bmp1;
+static bool s_bmp1_ok = false;
+static SemaphoreHandle_t s_data_mutex = nullptr;
+static bmp_reading_t s_latest = {0};
+
+static void task_sensor_bmp1(void *param) {
+  // Initialize device on shared SPI
+  if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+  s_bmp1_ok = s_bmp1.begin_SPI(PIN_CS_BMP1, &SPI);
+  if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+
+  if (!s_bmp1_ok) {
+    LOGLN("BMP390 #1 not found (check wiring)");
+    vTaskDelete(nullptr);
+    return;
+  }
+
+  if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+  s_bmp1.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  s_bmp1.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  s_bmp1.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  s_bmp1.setOutputDataRate(BMP3_ODR_50_HZ);
+  uint8_t id = s_bmp1.chipID();
+  if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+
+  LOGF("BMP390 #1 initialized, chipID=0x%02X (CS=%d)\n", id, PIN_CS_BMP1);
+
+  const TickType_t period = pdMS_TO_TICKS(BMP390_PERIOD_MS);
+  TickType_t last = xTaskGetTickCount();
+  for (;;) {
+    bool ok;
+    if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+    ok = s_bmp1.performReading();
+    if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+    if (ok) {
+      bmp_reading_t r;
+      r.temperature_c = s_bmp1.temperature;
+      r.pressure_pa   = s_bmp1.pressure;
+      if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+      r.altitude_m    = s_bmp1.readAltitude(SEALEVELPRESSURE_HPA);
+      if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+      r.valid         = true;
+      if (s_data_mutex) {
+        xSemaphoreTake(s_data_mutex, portMAX_DELAY);
+        s_latest = r;
+        xSemaphoreGive(s_data_mutex);
+      } else {
+        s_latest = r;
+      }
+    } else {
+      DEBUGLN("BMP390 read failed");
+    }
+    vTaskDelayUntil(&last, period);
+  }
+}
+
+void bmp390_start_task() {
+  if (!s_data_mutex) s_data_mutex = xSemaphoreCreateMutex();
+  xTaskCreatePinnedToCore(task_sensor_bmp1, "bmp1", TASK_STACK_BMP390, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
+}
+
+bool bmp390_get(bmp_reading_t &out) {
+  bool valid;
+  if (s_data_mutex) xSemaphoreTake(s_data_mutex, portMAX_DELAY);
+  out = s_latest;
+  valid = s_latest.valid;
+  if (s_data_mutex) xSemaphoreGive(s_data_mutex);
+  return valid;
+}
+

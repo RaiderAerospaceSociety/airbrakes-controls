@@ -1,45 +1,47 @@
+// Core
+#include <Arduino.h>
 #include <UMS3.h>
 
+// App modules
+#include "app_config.h"
+#include "logging.h"
+#include "bus.h"
+#include "board.h"
+#include "sensors_bmp390.h"
+#include "sensors_usfsmax.h"
+#include "tasks_led.h"
+#include "tasks_logger.h"
+#include "telemetry.h"
+
+extern "C" void telemetry_start_tasks();
+
+// Define the board object here so tasks can use it via board.h extern
 UMS3 ums3;
 
-uint32_t led_cycle_count = 0;
-
-void setup()
-{
+void setup() {
   Serial.begin(115200);
-  delay(500); // Wait for Serial to be ready
+  delay(1000);
 
-  // Initialize all board peripherals, call this first
+  // Init logging (mutex) and shared buses
+  logging_setup_mutex();
+  bus_setup();
+  delay(200);
+  bus_scan_i2c();
+
+  // Board setup
   ums3.begin();
-
-  // Brightness is 0-255. We set it to 1/3 brightness here
   ums3.setPixelBrightness(255 / 3);
-
-  // Enable the power to the RGB LED.
-  // Off by default so it doesn't use current when the LED is not required.
   ums3.setPixelPower(true);
+  delay(100);
+
+  // Start tasks
+  telemetry_start_tasks();
+  bmp390_start_task();
+  usfsmax_start_task();
+  logger_start_task();
+  led_start_task();
 }
 
-int color = 0;
-
-void loop()
-{
-  // colorWheel cycles red, orange, ..., back to red at 256
-  ums3.setPixelColor(UMS3::colorWheel(color));
-  color++;
-
-  // On the feathers3, toggle the LED twice per cycle
-#ifdef ARDUINO_FEATHERS3
-  if (color % 128 == 0)
-  {
-    ums3.toggleBlueLED();
-  }
-#endif
-
-  if (color % 255 == 0)
-  {
-    Serial.printf("LED cycle #%d\n", ++led_cycle_count);
-  }
-
-  delay(15);
+void loop() {
+  vTaskDelay(portMAX_DELAY);
 }
