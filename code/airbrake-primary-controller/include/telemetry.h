@@ -8,10 +8,15 @@
 // Section presence bitmask (reserved for future dynamic enabling)
 enum TelemetryPresent : uint32_t {
   TP_BMP390  = 1u << 0,
-  TP_USFSMAX = 1u << 1,
+  TP_IMU1    = 1u << 1, // formerly USFSMAX
   TP_SYSTEM  = 1u << 2,
   TP_CONTROL = 1u << 3,
+  TP_IMU2    = 1u << 4,
 };
+// Backward-compat alias
+#ifndef TP_USFSMAX
+#define TP_USFSMAX TP_IMU1
+#endif
 
 #pragma pack(push, 1)
 struct TelemetryHeader {
@@ -32,11 +37,21 @@ struct TelemetryBmp390 {
   uint8_t  _pad[3];
 };
 
-struct TelemetryUsfsmax {
+struct TelemetryImu1 {
   float    quat[4];        // w,x,y,z
   uint8_t  cal_status;     // 0 if unknown
   uint8_t  _pad[3];
   float    dhi_rsq;        // 0.0 if unused
+};
+// Backward-compat alias
+using TelemetryUsfsmax = TelemetryImu1;
+
+struct TelemetryImu2 {
+  float    accel_g[3];     // ax,ay,az in g
+  float    gyro_dps[3];    // gx,gy,gz in deg/s
+  float    temp_c;         // temperature C
+  uint8_t  status;         // 0 if ok
+  uint8_t  _pad[3];
 };
 
 struct TelemetrySystem {
@@ -56,10 +71,10 @@ struct TelemetryControl {
 struct TelemetryRecord {
   TelemetryHeader   hdr;
   TelemetryBmp390   bmp390;
-  TelemetryUsfsmax  usfs;
+  TelemetryImu1     imu1;
+  TelemetryImu2     imu2;
   TelemetrySystem   sys;
   TelemetryControl  ctl;
   uint32_t          crc32; // optional; 0 if disabled
 };
 #pragma pack(pop)
-

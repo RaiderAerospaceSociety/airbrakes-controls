@@ -11,7 +11,8 @@
 #include "bus.h"
 #include "board.h"
 #include "sensors_bmp390.h"
-#include "sensors_usfsmax.h"
+#include "sensors_imu1.h"
+#include "sensors_imu2.h"
 #include "tasks_led.h"
 #include "tasks_logger.h"
 #include "telemetry.h"
@@ -58,7 +59,8 @@ void setup() {
   // Start tasks
   telemetry_start_tasks();
   bmp390_start_task();
-  usfsmax_start_task();
+  imu1_start_task();
+  imu2_start_task();
   logger_start_task();
 }
 // !SECTION

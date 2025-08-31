@@ -11,7 +11,7 @@
 #include "app_config.h"
 #include "logging.h"
 #include "bus.h"
-#include "sensors_usfsmax.h"
+#include "sensors_imu1.h"
 
 // SECTION - Library Bridge ---------------------------------------------------
 #include <USFSMAX.h>
@@ -25,7 +25,7 @@ extern float angle[2][2];
 
 // SECTION - Module Globals ---------------------------------------------------
 static SemaphoreHandle_t s_usfs_mutex = nullptr; // protect local snapshot
-static usfs_reading_t s_latest = {0};
+static imu1_reading_t s_latest = {0};
 
 static I2Cdev s_i2c(&Wire);
 static USFSMAX s_usfs(&s_i2c, 0);
@@ -46,7 +46,7 @@ static void usfs_task(void *param) {
   Wire.setClock(I2C_CLOCK);
   if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
 
-  LOGLN("USFSMAX initialized (library)");
+  LOGLN("IMU1 (USFSMAX) initialized (library)");
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
@@ -93,7 +93,7 @@ static void usfs_task(void *param) {
     }
 
     // SECTION - Snapshot Build ----------------------------------------------
-    usfs_reading_t r;
+    imu1_reading_t r;
     r.quat[0] = qt[0][0];
     r.quat[1] = qt[0][1];
     r.quat[2] = qt[0][2];
@@ -115,11 +115,11 @@ static void usfs_task(void *param) {
 }
 // !SECTION
 
-void usfsmax_start_task() {
+void imu1_start_task() {
   xTaskCreatePinnedToCore(usfs_task, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool usfsmax_get(usfs_reading_t &out) {
+bool imu1_get(imu1_reading_t &out) {
   bool v;
   if (s_usfs_mutex) xSemaphoreTake(s_usfs_mutex, portMAX_DELAY);
   out = s_latest;

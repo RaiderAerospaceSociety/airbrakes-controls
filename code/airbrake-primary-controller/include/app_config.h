@@ -44,6 +44,10 @@
 #ifndef USFS_PERIOD_MS
 #define USFS_PERIOD_MS 20
 #endif
+// IMU2 (MPU6050) poll period
+#ifndef IMU2_PERIOD_MS
+#define IMU2_PERIOD_MS 20
+#endif
 // DRDY is not used; USFS is polled at USFS_PERIOD_MS
 #ifndef TELEM_PERIOD_MS
 #define TELEM_PERIOD_MS 20
@@ -63,6 +67,67 @@
 #endif
 #ifndef LOG_INCLUDE_QUAT
 #define LOG_INCLUDE_QUAT 1
+#endif
+
+// SECTION - Serial Monitor Output -------------------------------------------
+// Choose which values to print in logger CSV output
+#ifndef SERIAL_PLOTTER_MODE
+#define SERIAL_PLOTTER_MODE 1         // 1 = VSCode Serial Plotter format, 0 = CSV
+#endif
+
+// Enable side-by-side accelerometer comparison output
+#ifndef PLOT_COMPARE_ACCEL
+#define PLOT_COMPARE_ACCEL 1          // 1 = emit imu1 vs imu2 accel pairs
+#endif
+
+// Plotter single-channel selection (only used when SERIAL_PLOTTER_MODE=1)
+#define PLOT_SRC_IMU1_AX  1
+#define PLOT_SRC_IMU1_AY  2
+#define PLOT_SRC_IMU1_AZ  3
+#define PLOT_SRC_IMU2_AX  4
+#define PLOT_SRC_IMU2_AY  5
+#define PLOT_SRC_IMU2_AZ  6
+#define PLOT_SRC_IMU2_GX  7
+#define PLOT_SRC_IMU2_GY  8
+#define PLOT_SRC_IMU2_GZ  9
+
+#ifndef PLOT_SOURCE
+#define PLOT_SOURCE PLOT_SRC_IMU1_AX  // default: IMU1 accel X (g)
+#endif
+#ifndef PLOT_VAR_LABEL
+#define PLOT_VAR_LABEL "imu1_ax_g"    // label used by Serial Plotter
+#endif
+
+// Axis mask for comparison mode (bit0=X, bit1=Y, bit2=Z)
+#ifndef PLOT_ACCEL_AXES_MASK
+#define PLOT_ACCEL_AXES_MASK 0x1      // default: X only; set 0x7 for XYZ
+#endif
+#ifndef PLOT_INCLUDE_DIFF
+#define PLOT_INCLUDE_DIFF 1           // include diff (imu1 - imu2) per axis
+#endif
+#ifndef MON_ENABLE_TIME_MS
+#define MON_ENABLE_TIME_MS 1
+#endif
+#ifndef MON_ENABLE_BMP1
+#define MON_ENABLE_BMP1 0
+#endif
+#ifndef MON_ENABLE_IMU1_YPR
+#define MON_ENABLE_IMU1_YPR 0
+#endif
+#ifndef MON_ENABLE_IMU1_ACCEL
+#define MON_ENABLE_IMU1_ACCEL 1
+#endif
+#ifndef MON_ENABLE_IMU2_ACCEL
+#define MON_ENABLE_IMU2_ACCEL 1
+#endif
+#ifndef MON_ENABLE_IMU2_GYRO
+#define MON_ENABLE_IMU2_GYRO 1
+#endif
+#ifndef MON_ENABLE_IMU2_TEMP
+#define MON_ENABLE_IMU2_TEMP 0
+#endif
+#ifndef MON_PRINT_HEADER_EVERY
+#define MON_PRINT_HEADER_EVERY 50
 #endif
 
 // SECTION - LED/Pixel Config -------------------------------------------------

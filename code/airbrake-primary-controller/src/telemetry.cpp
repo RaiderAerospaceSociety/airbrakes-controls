@@ -9,7 +9,8 @@
 #include "app_config.h"
 #include "telemetry.h"
 #include "sensors_bmp390.h"
-#include "sensors_usfsmax.h"
+#include "sensors_imu1.h"
+#include "sensors_imu2.h"
 #include "logging.h"
 // !SECTION
 
@@ -49,7 +50,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   rec.hdr.packet_type = 0;
   rec.hdr.seq = seq;
   rec.hdr.timestamp_ms = millis();
-  rec.hdr.present_flags = TP_BMP390 | TP_USFSMAX | TP_SYSTEM | TP_CONTROL;
+  rec.hdr.present_flags = TP_BMP390 | TP_IMU1 | TP_IMU2 | TP_SYSTEM | TP_CONTROL;
 
   bmp_reading_t bmp;
   if (bmp390_get(bmp) && bmp.valid) {
@@ -59,14 +60,26 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
     rec.bmp390.status        = 0;
   }
 
-  usfs_reading_t u;
-  if (usfsmax_get(u) && u.valid) {
-    rec.usfs.quat[0] = u.quat[0];
-    rec.usfs.quat[1] = u.quat[1];
-    rec.usfs.quat[2] = u.quat[2];
-    rec.usfs.quat[3] = u.quat[3];
-    rec.usfs.cal_status = 0;
-    rec.usfs.dhi_rsq = 0.0f;
+  imu1_reading_t u1;
+  if (imu1_get(u1) && u1.valid) {
+    rec.imu1.quat[0] = u1.quat[0];
+    rec.imu1.quat[1] = u1.quat[1];
+    rec.imu1.quat[2] = u1.quat[2];
+    rec.imu1.quat[3] = u1.quat[3];
+    rec.imu1.cal_status = 0;
+    rec.imu1.dhi_rsq = 0.0f;
+  }
+
+  imu2_reading_t u2;
+  if (imu2_get(u2) && u2.valid) {
+    rec.imu2.accel_g[0] = u2.accel_g[0];
+    rec.imu2.accel_g[1] = u2.accel_g[1];
+    rec.imu2.accel_g[2] = u2.accel_g[2];
+    rec.imu2.gyro_dps[0] = u2.gyro_dps[0];
+    rec.imu2.gyro_dps[1] = u2.gyro_dps[1];
+    rec.imu2.gyro_dps[2] = u2.gyro_dps[2];
+    rec.imu2.temp_c = u2.temp_c;
+    rec.imu2.status = 0;
   }
 
   rec.sys.vbat_mv = 0; // TODO: wire ADC later
