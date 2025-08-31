@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - App Configuration ------------------------------------------------
 // Application configuration and tuning
 #pragma once
 
@@ -32,7 +34,7 @@
 #define BMP390_PERIOD_MS 100
 #endif
 #ifndef LOGGER_PERIOD_MS
-#define LOGGER_PERIOD_MS 100
+#define LOGGER_PERIOD_MS 50
 #endif
 #ifndef LED_PERIOD_MS
 #define LED_PERIOD_MS 15
@@ -63,6 +65,19 @@
 #define LOG_INCLUDE_QUAT 1
 #endif
 
+// SECTION - LED/Pixel Config -------------------------------------------------
+// Visual boot animation and steady run color
+#ifndef LED_BOOT_STEPS
+#define LED_BOOT_STEPS 128      // Number of color steps in boot sequence
+#endif
+#ifndef LED_BOOT_DELAY_MS
+#define LED_BOOT_DELAY_MS 8     // Delay per step (ms)
+#endif
+#ifndef LED_RUN_COLOR
+#define LED_RUN_COLOR 0x00FF00  // Solid green while running
+#endif
+// !SECTION
+
 // Sea level pressure for altitude calc
 #ifndef SEALEVELPRESSURE_HPA
 #define SEALEVELPRESSURE_HPA (1012.0)
@@ -72,3 +87,4 @@
 #ifndef APP_CPU_NUM
 #define APP_CPU_NUM 1
 #endif
+// !SECTION

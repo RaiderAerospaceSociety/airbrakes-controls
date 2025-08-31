@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Includes ---------------------------------------------------------
 // USFSMAX reader using upstream library (USFSMAX + I2Cdev)
 #include <Arduino.h>
 #include <Wire.h>
@@ -11,7 +13,9 @@
 #include "bus.h"
 #include "sensors_usfsmax.h"
 
+// SECTION - Library Bridge ---------------------------------------------------
 #include <USFSMAX.h>
+// !SECTION
 
 extern float qt[2][4];
 extern int16_t accADC[2][3];
@@ -19,11 +23,13 @@ extern float g_per_count;
 extern float heading[2];
 extern float angle[2][2];
 
+// SECTION - Module Globals ---------------------------------------------------
 static SemaphoreHandle_t s_usfs_mutex = nullptr; // protect local snapshot
 static usfs_reading_t s_latest = {0};
 
 static I2Cdev s_i2c(&Wire);
 static USFSMAX s_usfs(&s_i2c, 0);
+// !SECTION
 
 static void usfs_task(void *param) {
   if (!s_usfs_mutex) s_usfs_mutex = xSemaphoreCreateMutex();
@@ -44,6 +50,7 @@ static void usfs_task(void *param) {
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
+  // SECTION - Main Task Loop -------------------------------------------------
   for (;;) {
     // Poll at a fixed rate; no DRDY gating
     // Follow example: read event status to optimize what to fetch
@@ -85,6 +92,7 @@ static void usfs_task(void *param) {
       s_usfs.getEULER();
     }
 
+    // SECTION - Snapshot Build ----------------------------------------------
     usfs_reading_t r;
     r.quat[0] = qt[0][0];
     r.quat[1] = qt[0][1];
@@ -101,9 +109,11 @@ static void usfs_task(void *param) {
     } else {
       s_latest = r;
     }
+    // !SECTION
     vTaskDelayUntil(&last, period);
   }
 }
+// !SECTION
 
 void usfsmax_start_task() {
   xTaskCreatePinnedToCore(usfs_task, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);

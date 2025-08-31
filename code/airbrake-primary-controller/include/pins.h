@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Pins Map ---------------------------------------------------------
 // Centralized pin map with override-friendly macros.
 // You can override any of these via PlatformIO build_flags, e.g.:
 //   -D PIN_SDA1=8 -D PIN_SCL1=9 -D PIN_SCK1=36 -D PIN_MISO1=37 -D PIN_MOSI1=35 -D PIN_CS_BMP1=5
@@ -6,10 +8,10 @@
 
 // I2C
 #ifndef PIN_SDA1
-#define PIN_SDA1 38   // Feather S3 typical SDA
+#define PIN_SDA1 33   // Feather S3 typical SDA
 #endif
 #ifndef PIN_SCL1
-#define PIN_SCL1 1   // Feather S3 typical SCL
+#define PIN_SCL1 38   // Feather S3 typical SCL
 #endif
 
 // SPI
@@ -26,7 +28,11 @@
 
 // SPI (cs)
 #ifndef PIN_CS_BMP1
-#define PIN_CS_BMP1 5 // Default CS for BMP1
+#define PIN_CS_BMP1 10 // Default CS for BMP1
+#endif
+#ifndef PIN_CS_SD1
+#define PIN_CS_SD1 11 // Default CS for SD1
 #endif
 
 // USFSMAX DRDY not used; polling is employed
+// !SECTION

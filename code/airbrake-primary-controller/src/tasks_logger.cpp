@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Includes ---------------------------------------------------------
 // Logger task: periodically prints sensor readings
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -7,9 +9,11 @@
 #include "logging.h"
 #include "sensors_bmp390.h"
 #include "sensors_usfsmax.h"
+// !SECTION
 extern float heading[2];
 extern float angle[2][2];
 
+// SECTION - Task -------------------------------------------------------------
 static void task_logger(void *param) {
   const TickType_t period = pdMS_TO_TICKS(LOGGER_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
@@ -39,6 +43,7 @@ static void task_logger(void *param) {
     vTaskDelayUntil(&last, period);
   }
 }
+// !SECTION
 
 void logger_start_task() {
   xTaskCreatePinnedToCore(task_logger, "logger", TASK_STACK_LOGGER, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);

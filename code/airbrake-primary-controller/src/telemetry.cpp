@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Includes ---------------------------------------------------------
 // Telemetry aggregator and (optional) SD logger queue
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -9,14 +11,17 @@
 #include "sensors_bmp390.h"
 #include "sensors_usfsmax.h"
 #include "logging.h"
+// !SECTION
 
 #if LOG_BINARY_ON_SD
 #include <SPI.h>
 #include <SD.h>
 #endif
 
+// SECTION - Module Globals ---------------------------------------------------
 static SemaphoreHandle_t s_telem_mutex = nullptr;
 static TelemetryRecord   s_latest = {};
+// !SECTION
 
 #if LOG_BINARY_ON_SD
 static QueueHandle_t     s_telem_q = nullptr;
@@ -80,6 +85,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
 #endif
 }
 
+// SECTION - Tasks ------------------------------------------------------------
 static void task_telem_agg(void *param) {
   if (!s_telem_mutex) s_telem_mutex = xSemaphoreCreateMutex();
   uint32_t seq = 0;
@@ -135,6 +141,7 @@ static void task_sd_writer(void *param) {
   }
 }
 #endif
+// !SECTION
 
 bool telemetry_get_latest(TelemetryRecord &out) {
   if (s_telem_mutex) xSemaphoreTake(s_telem_mutex, portMAX_DELAY);
@@ -150,4 +157,3 @@ extern "C" void telemetry_start_tasks() {
   xTaskCreatePinnedToCore(task_sd_writer, "sdlog", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 #endif
 }
-

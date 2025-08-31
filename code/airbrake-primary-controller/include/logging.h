@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Logging API ------------------------------------------------------
 // Mutex-guarded Serial logging and debug macros
 #pragma once
 
@@ -44,3 +46,4 @@ inline void logging_setup_mutex() {
     }                                                                                   \
   } while (0)
 
+// !SECTION

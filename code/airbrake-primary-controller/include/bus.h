@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Bus API ----------------------------------------------------------
 // Shared bus setup and mutexes
 #pragma once
 
@@ -26,3 +28,4 @@ inline void bus_setup() {
 
 // Scan the I2C bus and print discovered device addresses (debug-friendly)
 void bus_scan_i2c();
+// !SECTION

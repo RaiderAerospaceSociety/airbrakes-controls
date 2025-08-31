@@ -1,3 +1,5 @@
+// ANCHOR: Overview
+// SECTION - Includes ---------------------------------------------------------
 // BMP390 task implementation
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -10,12 +12,16 @@
 #include "bus.h"
 #include "pins.h"
 #include "sensors_bmp390.h"
+// !SECTION
 
+// SECTION - Module Globals ---------------------------------------------------
 static Adafruit_BMP3XX s_bmp1;
 static bool s_bmp1_ok = false;
 static SemaphoreHandle_t s_data_mutex = nullptr;
 static bmp_reading_t s_latest = {0};
+// !SECTION
 
+// SECTION - Task -------------------------------------------------------------
 static void task_sensor_bmp1(void *param) {
   // Initialize device on shared SPI
   if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
@@ -66,7 +72,9 @@ static void task_sensor_bmp1(void *param) {
     vTaskDelayUntil(&last, period);
   }
 }
+// !SECTION
 
+// SECTION - API --------------------------------------------------------------
 void bmp390_start_task() {
   if (!s_data_mutex) s_data_mutex = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(task_sensor_bmp1, "bmp1", TASK_STACK_BMP390, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
@@ -80,4 +88,4 @@ bool bmp390_get(bmp_reading_t &out) {
   if (s_data_mutex) xSemaphoreGive(s_data_mutex);
   return valid;
 }
-
+// !SECTION
