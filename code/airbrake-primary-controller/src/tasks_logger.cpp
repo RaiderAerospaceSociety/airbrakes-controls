@@ -21,56 +21,73 @@ static void task_logger(void *param) {
   const TickType_t period = pdMS_TO_TICKS(LOGGER_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;) {
-    float value = 0.0f;
-    bool have = false;
+#if PLOT_COMPARE_ACCEL
+    imu1_reading_t u1; bool v1 = imu1_get(u1) && u1.valid;
+    imu2_reading_t u2; bool v2 = imu2_get(u2) && u2.valid;
 
+    Serial.print(">");
+
+    auto emit_pair = [](const char* l1, float v1, const char* l2, float v2, bool &first){
+      if (!first) Serial.print(","); first = false;
+      Serial.print(l1); Serial.print(":"); Serial.print(v1, 6); Serial.print(",");
+      Serial.print(l2); Serial.print(":"); Serial.print(v2, 6);
+    };
+    auto emit_diff = [](const char* ld, float vd, bool &first){
+      if (!first) Serial.print(","); first = false;
+      Serial.print(ld); Serial.print(":"); Serial.print(vd, 6);
+    };
+
+    bool first = true;
+
+    if (PLOT_ACCEL_AXES_MASK & 0x1) {
+      float a1 = v1 ? u1.accel_g[0] : NAN;
+      float a2 = v2 ? u2.accel_g[0] : NAN;
+      emit_pair("imu1_ax_g", a1, "imu2_ax_g", a2, first);
+#if PLOT_INCLUDE_DIFF
+      emit_diff("diff_ax_g", (v1 && v2) ? (a1 - a2) : NAN, first);
+#endif
+    }
+    if (PLOT_ACCEL_AXES_MASK & 0x2) {
+      float a1 = v1 ? u1.accel_g[1] : NAN;
+      float a2 = v2 ? u2.accel_g[1] : NAN;
+      emit_pair("imu1_ay_g", a1, "imu2_ay_g", a2, first);
+#if PLOT_INCLUDE_DIFF
+      emit_diff("diff_ay_g", (v1 && v2) ? (a1 - a2) : NAN, first);
+#endif
+    }
+    if (PLOT_ACCEL_AXES_MASK & 0x4) {
+      float a1 = v1 ? u1.accel_g[2] : NAN;
+      float a2 = v2 ? u2.accel_g[2] : NAN;
+      emit_pair("imu1_az_g", a1, "imu2_az_g", a2, first);
+#if PLOT_INCLUDE_DIFF
+      emit_diff("diff_az_g", (v1 && v2) ? (a1 - a2) : NAN, first);
+#endif
+    }
+
+    Serial.println();
+#else
+    // Single-channel mode (backward-compatible)
+    float value = 0.0f; bool have = false;
     switch (PLOT_SOURCE) {
-      case PLOT_SRC_IMU1_AX:
-      case PLOT_SRC_IMU1_AY:
-      case PLOT_SRC_IMU1_AZ: {
-        imu1_reading_t u;
-        if (imu1_get(u) && u.valid) {
+      case PLOT_SRC_IMU1_AX: case PLOT_SRC_IMU1_AY: case PLOT_SRC_IMU1_AZ: {
+        imu1_reading_t u; if (imu1_get(u) && u.valid) {
           int idx = (PLOT_SOURCE == PLOT_SRC_IMU1_AX) ? 0 : (PLOT_SOURCE == PLOT_SRC_IMU1_AY ? 1 : 2);
-          value = u.accel_g[idx];
-          have = true;
-        }
-        break;
-      }
-      case PLOT_SRC_IMU2_AX:
-      case PLOT_SRC_IMU2_AY:
-      case PLOT_SRC_IMU2_AZ: {
-        imu2_reading_t u2;
-        if (imu2_get(u2) && u2.valid) {
+          value = u.accel_g[idx]; have = true; }
+        break; }
+      case PLOT_SRC_IMU2_AX: case PLOT_SRC_IMU2_AY: case PLOT_SRC_IMU2_AZ: {
+        imu2_reading_t u2; if (imu2_get(u2) && u2.valid) {
           int idx = (PLOT_SOURCE == PLOT_SRC_IMU2_AX) ? 0 : (PLOT_SOURCE == PLOT_SRC_IMU2_AY ? 1 : 2);
-          value = u2.accel_g[idx];
-          have = true;
-        }
-        break;
-      }
-      case PLOT_SRC_IMU2_GX:
-      case PLOT_SRC_IMU2_GY:
-      case PLOT_SRC_IMU2_GZ: {
-        imu2_reading_t u2;
-        if (imu2_get(u2) && u2.valid) {
+          value = u2.accel_g[idx]; have = true; }
+        break; }
+      case PLOT_SRC_IMU2_GX: case PLOT_SRC_IMU2_GY: case PLOT_SRC_IMU2_GZ: {
+        imu2_reading_t u2; if (imu2_get(u2) && u2.valid) {
           int idx = (PLOT_SOURCE == PLOT_SRC_IMU2_GX) ? 0 : (PLOT_SOURCE == PLOT_SRC_IMU2_GY ? 1 : 2);
-          value = u2.gyro_dps[idx];
-          have = true;
-        }
-        break;
-      }
-      default:
-        have = false;
-        break;
+          value = u2.gyro_dps[idx]; have = true; }
+        break; }
+      default: have = false; break;
     }
-
-    if (have) {
-      Serial.print(">");
-      Serial.print(PLOT_VAR_LABEL);
-      Serial.print(":");
-      Serial.print(value, 6);
-      Serial.println();
-    }
-
+    if (have) { Serial.print(">"); Serial.print(PLOT_VAR_LABEL); Serial.print(":"); Serial.print(value, 6); Serial.println(); }
+#endif
     vTaskDelayUntil(&last, period);
   }
 }
