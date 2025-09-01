@@ -39,6 +39,10 @@
 #ifndef LED_PERIOD_MS
 #define LED_PERIOD_MS 15
 #endif
+// Zero AGL baseline after this many ms from boot
+#ifndef ZERO_AGL_AFTER_MS
+#define ZERO_AGL_AFTER_MS 10000
+#endif
 
 // Telemetry & SD logging
 #ifndef USFS_PERIOD_MS
@@ -71,6 +75,9 @@
 
 // SECTION - Serial Monitor Output -------------------------------------------
 // Choose which values to print in logger CSV output
+#ifndef MON_LOG_FROM_TELEM
+#define MON_LOG_FROM_TELEM 1  // Prefer telemetry snapshot when available
+#endif
 #ifndef SERIAL_PLOTTER_MODE
 #define SERIAL_PLOTTER_MODE 1         // 1 = VSCode Serial Plotter format, 0 = CSV
 #endif

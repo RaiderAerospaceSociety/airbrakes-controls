@@ -68,6 +68,7 @@ struct TelemetryControl {
   float    airbrake_actual_deg;
 };
 
+
 struct TelemetryRecord {
   TelemetryHeader   hdr;
   TelemetryBmp390   bmp390;
@@ -78,3 +79,13 @@ struct TelemetryRecord {
   uint32_t          crc32; // optional; 0 if disabled
 };
 #pragma pack(pop)
+
+// Telemetry APIs
+#ifdef __cplusplus
+// Copy the most recent telemetry snapshot into `out`.
+// Returns true if a snapshot was available.
+bool telemetry_get_latest(TelemetryRecord &out);
+
+// Start telemetry-related FreeRTOS tasks (aggregator and optional SD logger).
+extern "C" void telemetry_start_tasks();
+#endif

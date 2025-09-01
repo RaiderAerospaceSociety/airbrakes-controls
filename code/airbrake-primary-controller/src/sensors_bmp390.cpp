@@ -55,9 +55,7 @@ static void task_sensor_bmp1(void *param) {
       bmp_reading_t r;
       r.temperature_c = s_bmp1.temperature;
       r.pressure_pa   = s_bmp1.pressure;
-      if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
-      r.altitude_m    = s_bmp1.readAltitude(SEALEVELPRESSURE_HPA);
-      if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+      r.altitude_m    = 44330.0 * (1.0 - pow((r.pressure_pa / 100.0F) / SEALEVELPRESSURE_HPA, 0.1903));
       r.valid         = true;
       if (s_data_mutex) {
         xSemaphoreTake(s_data_mutex, portMAX_DELAY);

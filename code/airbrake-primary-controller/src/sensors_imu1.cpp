@@ -22,6 +22,7 @@ extern int16_t accADC[2][3];
 extern float g_per_count;
 extern float heading[2];
 extern float angle[2][2];
+extern int32_t baroADC[2];
 
 // SECTION - Module Globals ---------------------------------------------------
 static SemaphoreHandle_t s_usfs_mutex = nullptr; // protect local snapshot
@@ -51,6 +52,8 @@ static void usfs_task(void *param) {
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   // SECTION - Main Task Loop -------------------------------------------------
+  static float last_pressure_pa = NAN;
+  static float last_altitude_m  = NAN;
   for (;;) {
     // Poll at a fixed rate; no DRDY gating
     // Follow example: read event status to optimize what to fetch
@@ -101,6 +104,14 @@ static void usfs_task(void *param) {
     r.accel_g[0] = accADC[0][0] * g_per_count;
     r.accel_g[1] = accADC[0][1] * g_per_count;
     r.accel_g[2] = accADC[0][2] * g_per_count;
+    // Internal baro sample: update only when a new BARO event was indicated
+    if (evt & 0x08) {
+      // LPS22HB output: 4096 LSB/hPa => 100/4096 Pa per count
+      last_pressure_pa = ((float)baroADC[0]) * (100.0f / 4096.0f);
+      last_altitude_m  = 44330.0f * (1.0f - pow((last_pressure_pa / 100.0f) / SEALEVELPRESSURE_HPA, 0.1903f));
+    }
+    r.pressure_pa = last_pressure_pa;
+    r.altitude_m  = last_altitude_m;
     r.valid   = true;
     if (s_usfs_mutex) {
       xSemaphoreTake(s_usfs_mutex, portMAX_DELAY);
