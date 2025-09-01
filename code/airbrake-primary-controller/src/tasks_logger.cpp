@@ -24,20 +24,27 @@ static void task_logger(void *param) {
     // VS Code Serial Plotter format: ">label:value,label:value"
     TelemetryRecord rec; telemetry_get_latest(rec);
     svc::FusedAlt f; svc::fusion_get_alt(f);
-    float bmp_alt  = f.bmp1_alt_m;
-    float imu_alt  = f.imu1_alt_m;
     bool agl_ready = f.agl_ready;
 
-    Serial.print(">bmp1_alt_m:");
-    Serial.print(bmp_alt, 3);
-    Serial.print(",imu1_baro_alt_m:");
-    Serial.print(imu_alt, 3);
-    Serial.print(",agl_bmp1_m:");
-    Serial.print(agl_ready ? f.agl_bmp1_m : NAN, 3);
-    Serial.print(",agl_imu1_m:");
-    Serial.print(agl_ready ? f.agl_imu1_m : NAN, 3);
-    Serial.print(",agl_fused_m:");
-    Serial.print(agl_ready ? f.agl_fused_m : NAN, 3);
+    Serial.print(">bmp1_alt_m:"); Serial.print(f.bmp1_alt_m, 3);
+    Serial.print(",imu1_baro_alt_m:"); Serial.print(f.imu1_alt_m, 3);
+    Serial.print(",agl_bmp1_m:"); Serial.print(agl_ready ? f.agl_bmp1_m : NAN, 3);
+    Serial.print(",agl_imu1_m:"); Serial.print(agl_ready ? f.agl_imu1_m : NAN, 3);
+    Serial.print(",agl_fused_m:"); Serial.print(agl_ready ? f.agl_fused_m : NAN, 3);
+    Serial.print(",vz_mps:"); Serial.print(agl_ready ? f.vz_mps : NAN, 3);
+#if FUSION_USE_ACC_INT
+    Serial.print(",vz_acc_mps:"); Serial.print(agl_ready ? f.vz_acc_mps : NAN, 3);
+#endif
+    Serial.print(",az_imu1_mps2:"); Serial.print(f.az_imu1_mps2, 3);
+    Serial.print(",temp_C:"); Serial.print(f.temp_c, 3);
+    Serial.print(",press_hPa:"); Serial.print(f.press_hPa, 3);
+    Serial.print(",sos_mps:"); Serial.print(f.sos_mps, 3);
+    Serial.print(",mach_vz:"); Serial.print(f.mach_vz, 4);
+    Serial.print(",yaw_deg:"); Serial.print(f.yaw_deg, 2);
+    Serial.print(",pitch_deg:"); Serial.print(f.pitch_deg, 2);
+    Serial.print(",roll_deg:"); Serial.print(f.roll_deg, 2);
+    Serial.print(",t_apogee_s:"); Serial.print(f.t_apogee_s, 3);
+    Serial.print(",apogee_agl_m:"); Serial.print(f.apogee_agl_m, 2);
     Serial.println();
 
     vTaskDelayUntil(&last, period);

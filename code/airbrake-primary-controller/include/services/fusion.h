@@ -21,6 +21,20 @@ struct FusedAlt {
   float agl_imu1_m;     // AGL from IMU1
   float agl_fused_m;    // fused AGL
   bool  agl_ready;      // baseline captured
+  // Kinematics
+  float vz_mps;         // vertical speed from AGL derivative
+  float vz_acc_mps;     // vertical speed from accel integration (experimental)
+  float az_imu1_mps2;   // vertical accel from IMU1 (earth frame)
+  // Atmospherics
+  float temp_c;         // BMP1 temperature
+  float press_hPa;      // BMP1 pressure (hPa)
+  float sos_mps;        // speed of sound from temperature
+  float mach_vz;        // |vz| / sos
+  // Attitude
+  float yaw_deg, pitch_deg, roll_deg; // from IMU1 quaternion
+  // Predictive
+  float t_apogee_s;     // biased early
+  float apogee_agl_m;   // biased low
 };
 
 // Start background fusion task

@@ -44,6 +44,26 @@
 #define ZERO_AGL_AFTER_MS 10000
 #endif
 
+// Fusion/derivation tuning ---------------------------------------------------
+#ifndef FUSION_W_BMP1
+#define FUSION_W_BMP1 0.70f        // weight for BMP1 in fused AGL
+#endif
+#ifndef FUSION_VZ_ALPHA
+#define FUSION_VZ_ALPHA 0.85f      // smoothing for vertical speed derivative (0..1)
+#endif
+#ifndef FUSION_VZ_MAX_DT_MS
+#define FUSION_VZ_MAX_DT_MS 200    // cap dt to avoid spikes on first tick
+#endif
+#ifndef FUSION_SAFE_TAPX_FACTOR
+#define FUSION_SAFE_TAPX_FACTOR 0.7f  // bias to predict apogee earlier (<=1)
+#endif
+#ifndef FUSION_SAFE_ZAPX_FACTOR
+#define FUSION_SAFE_ZAPX_FACTOR 0.8f  // bias to under-estimate apogee altitude (<=1)
+#endif
+#ifndef FUSION_USE_ACC_INT
+#define FUSION_USE_ACC_INT 1       // compute experimental vz from accel integration
+#endif
+
 // Telemetry & SD logging
 #ifndef USFS_PERIOD_MS
 #define USFS_PERIOD_MS 20
