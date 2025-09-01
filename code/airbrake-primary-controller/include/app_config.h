@@ -66,6 +66,13 @@
 #ifndef FUSION_VZ_FUSE_BETA
 #define FUSION_VZ_FUSE_BETA 0.8f   // fused vz = beta*baro + (1-beta)*acc
 #endif
+// Tilt azimuth smoothing (unit-vector EMA) and validity threshold
+#ifndef FUSION_TILT_AZ_ALPHA
+#define FUSION_TILT_AZ_ALPHA 0.9f   // 0..1, higher = more smoothing
+#endif
+#ifndef FUSION_TILT_AZ_MIN_TILT_DEG
+#define FUSION_TILT_AZ_MIN_TILT_DEG 2.0f // require at least this tilt to update azimuth
+#endif
 
 // Telemetry & SD logging
 #ifndef USFS_PERIOD_MS

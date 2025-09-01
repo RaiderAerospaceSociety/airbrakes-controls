@@ -60,6 +60,12 @@ static void fusion_task(void *param) {
   static uint32_t prev_ms = 0;
   static float vz_filt = NAN;
   static float vz_acc = 0.0f; // leaky integrator
+  // Smoothed tilt azimuth unit vector in Earth XY
+  static bool have_tilt_az = false;
+  static float tiltAzX = NAN, tiltAzY = NAN;
+  static bool have_tilt_az_acc = false;
+  static float tilt_az_prev_deg = 0.0f;
+  static float tilt_az_unwrapped = 0.0f;
   for (;;) {
     // Read raw altitudes
     bmp_reading_t b; bool vb = bmp390_get(b) && b.valid;
@@ -161,7 +167,7 @@ static void fusion_task(void *param) {
 
     // Euler from IMU1
     float yaw= NAN, pitch= NAN, roll= NAN;
-    float tilt_deg = NAN, tilt_az_deg = NAN;
+    float tilt_deg = NAN, tilt_az_deg = NAN, tilt_az_deg360 = NAN, tilt_az_unwrapped_deg = NAN;
     if (vi) {
       quat_to_euler(u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3], yaw, pitch, roll);
       // Tilt metrics robust near vertical: rotate body +X (nose) into Earth frame
@@ -172,10 +178,44 @@ static void fusion_task(void *param) {
       // Angle from Earth Up (Z)
       float cz = fmaxf(-1.0f, fminf(1.0f, x_earth[2]));
       tilt_deg = acosf(cz) * 57.2957795f;
-      // Azimuth of tilt direction around Earth Z (atan2(y, x))
+      // Azimuth of tilt direction around Earth Z (atan2(y, x)) with smoothing and hysteresis
       float h2 = x_earth[0]*x_earth[0] + x_earth[1]*x_earth[1];
-      if (h2 > 1e-6f) tilt_az_deg = atan2f(x_earth[1], x_earth[0]) * 57.2957795f; // East=0°, North=+90°
-      else tilt_az_deg = NAN; // near vertical, azimuth ill-defined
+      float h = sqrtf(h2);
+      if (tilt_deg >= FUSION_TILT_AZ_MIN_TILT_DEG && h > 1e-4f) {
+        float hx = x_earth[0] / h;
+        float hy = x_earth[1] / h;
+        if (!have_tilt_az || isnan(tiltAzX) || isnan(tiltAzY)) {
+          tiltAzX = hx; tiltAzY = hy; have_tilt_az = true;
+        } else {
+          tiltAzX = FUSION_TILT_AZ_ALPHA * tiltAzX + (1.0f - FUSION_TILT_AZ_ALPHA) * hx;
+          tiltAzY = FUSION_TILT_AZ_ALPHA * tiltAzY + (1.0f - FUSION_TILT_AZ_ALPHA) * hy;
+          float n = sqrtf(tiltAzX*tiltAzX + tiltAzY*tiltAzY);
+          if (n > 1e-6f) { tiltAzX /= n; tiltAzY /= n; }
+        }
+        tilt_az_deg = atan2f(tiltAzY, tiltAzX) * 57.2957795f; // East=0°, North=+90°
+      } else {
+        // keep last if we have one; else NaN
+        if (have_tilt_az) tilt_az_deg = atan2f(tiltAzY, tiltAzX) * 57.2957795f;
+        else tilt_az_deg = NAN;
+      }
+      // 0..360 mapping
+      if (!isnan(tilt_az_deg)) {
+        tilt_az_deg360 = (tilt_az_deg < 0.0f) ? (tilt_az_deg + 360.0f) : tilt_az_deg;
+        // Unwrap across ±180 into continuous angle
+        if (!have_tilt_az_acc) {
+          tilt_az_prev_deg = tilt_az_deg;
+          tilt_az_unwrapped = tilt_az_deg;
+          have_tilt_az_acc = true;
+        } else {
+          float delta = tilt_az_deg - tilt_az_prev_deg;
+          // Wrap delta into [-180, 180]
+          while (delta > 180.0f) delta -= 360.0f;
+          while (delta < -180.0f) delta += 360.0f;
+          tilt_az_unwrapped += delta;
+          tilt_az_prev_deg = tilt_az_deg;
+        }
+        tilt_az_unwrapped_deg = tilt_az_unwrapped;
+      }
     }
 
     // Fused vertical speed (complementary)
@@ -206,6 +246,8 @@ static void fusion_task(void *param) {
     s_fused_alt.mach_vz = mach_vz;
     s_fused_alt.yaw_deg = yaw; s_fused_alt.pitch_deg = pitch; s_fused_alt.roll_deg = roll;
     s_fused_alt.tilt_deg = tilt_deg; s_fused_alt.tilt_az_deg = tilt_az_deg;
+    s_fused_alt.tilt_az_deg360 = tilt_az_deg360;
+    s_fused_alt.tilt_az_unwrapped_deg = tilt_az_unwrapped_deg;
     s_fused_alt.t_apogee_s = t_apx;
     s_fused_alt.apogee_agl_m = z_apx;
     if (s_alt_mutex) xSemaphoreGive(s_alt_mutex);
