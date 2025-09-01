@@ -91,7 +91,6 @@ static void fusion_task(void *param) {
 
     // Vertical speed from AGL derivative (EMA)
     float vz = NAN;
-    uint32_t now = millis();
     float dt_s_for_step = NAN;
     if (s_agl_ready && !isnan(agl_fused)) {
       if (have_prev_alt) {
