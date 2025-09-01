@@ -31,10 +31,11 @@ static void task_logger(void *param) {
     Serial.print(",agl_bmp1_m:"); Serial.print(agl_ready ? f.agl_bmp1_m : NAN, 3);
     Serial.print(",agl_imu1_m:"); Serial.print(agl_ready ? f.agl_imu1_m : NAN, 3);
     Serial.print(",agl_fused_m:"); Serial.print(agl_ready ? f.agl_fused_m : NAN, 3);
-    Serial.print(",vz_mps:"); Serial.print(agl_ready ? f.vz_mps : NAN, 3);
+    Serial.print(",vz_baro_mps:"); Serial.print(agl_ready ? f.vz_mps : NAN, 3);
 #if FUSION_USE_ACC_INT
     Serial.print(",vz_acc_mps:"); Serial.print(agl_ready ? f.vz_acc_mps : NAN, 3);
 #endif
+    Serial.print(",vz_fused_mps:"); Serial.print(agl_ready ? f.vz_fused_mps : NAN, 3);
     Serial.print(",az_imu1_mps2:"); Serial.print(f.az_imu1_mps2, 3);
     Serial.print(",temp_C:"); Serial.print(f.temp_c, 3);
     Serial.print(",press_hPa:"); Serial.print(f.press_hPa, 3);

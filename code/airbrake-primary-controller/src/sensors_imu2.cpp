@@ -10,6 +10,7 @@
 #include "logging.h"
 #include "bus.h"
 #include "sensors_imu2.h"
+#include "config/sensors_config.h"
 
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
@@ -57,12 +58,23 @@ static void imu2_task(void *param) {
     // Convert m/s^2 to g, rad/s to deg/s
     const float G = 9.80665f;
     const float RAD2DEG = 57.2957795f;
-    r.accel_g[0] = a.acceleration.x / G;
-    r.accel_g[1] = a.acceleration.y / G;
-    r.accel_g[2] = a.acceleration.z / G;
-    r.gyro_dps[0] = g.gyro.x * RAD2DEG;
-    r.gyro_dps[1] = g.gyro.y * RAD2DEG;
-    r.gyro_dps[2] = g.gyro.z * RAD2DEG;
+    // Apply fixed orientation mapping to rocket body frame
+    float ax_s = a.acceleration.x / G;
+    float ay_s = a.acceleration.y / G;
+    float az_s = a.acceleration.z / G;
+    float gx_s = g.gyro.x * RAD2DEG;
+    float gy_s = g.gyro.y * RAD2DEG;
+    float gz_s = g.gyro.z * RAD2DEG;
+    const float R[9] = { IMU2_R00, IMU2_R01, IMU2_R02,
+                         IMU2_R10, IMU2_R11, IMU2_R12,
+                         IMU2_R20, IMU2_R21, IMU2_R22 };
+    auto rot = [&](float x, float y, float z, float &xo, float &yo, float &zo){
+      xo = R[0]*x + R[1]*y + R[2]*z;
+      yo = R[3]*x + R[4]*y + R[5]*z;
+      zo = R[6]*x + R[7]*y + R[8]*z;
+    };
+    rot(ax_s, ay_s, az_s, r.accel_g[0], r.accel_g[1], r.accel_g[2]);
+    rot(gx_s, gy_s, gz_s, r.gyro_dps[0], r.gyro_dps[1], r.gyro_dps[2]);
     r.temp_c = temp.temperature;
     r.valid = true;
 
@@ -83,4 +95,3 @@ bool imu2_get(imu2_reading_t &out) {
   if (s_mutex) xSemaphoreGive(s_mutex);
   return v;
 }
-

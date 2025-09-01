@@ -63,6 +63,9 @@
 #ifndef FUSION_USE_ACC_INT
 #define FUSION_USE_ACC_INT 1       // compute experimental vz from accel integration
 #endif
+#ifndef FUSION_VZ_FUSE_BETA
+#define FUSION_VZ_FUSE_BETA 0.8f   // fused vz = beta*baro + (1-beta)*acc
+#endif
 
 // Telemetry & SD logging
 #ifndef USFS_PERIOD_MS

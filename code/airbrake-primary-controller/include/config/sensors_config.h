@@ -7,3 +7,18 @@
 // - Default IMU ranges and LPF
 // - Sea level pressure default for altitude
 
+// IMU2 (MPU6050) orientation mapping to rocket body frame
+// Define a 3x3 rotation matrix R such that: v_body = R * v_sensor
+// Default is identity (assumes sensor axes already aligned to body axes)
+#ifndef IMU2_R00
+#define IMU2_R00 1.0f
+#define IMU2_R01 0.0f
+#define IMU2_R02 0.0f
+#define IMU2_R10 0.0f
+#define IMU2_R11 1.0f
+#define IMU2_R12 0.0f
+#define IMU2_R20 0.0f
+#define IMU2_R21 0.0f
+#define IMU2_R22 1.0f
+#endif
+

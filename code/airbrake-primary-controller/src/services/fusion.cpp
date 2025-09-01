@@ -163,6 +163,16 @@ static void fusion_task(void *param) {
     float yaw= NAN, pitch= NAN, roll= NAN;
     if (vi) { quat_to_euler(u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3], yaw, pitch, roll); }
 
+    // Fused vertical speed (complementary)
+    float vz_fused = NAN;
+    if (!isnan(vz) && !isnan(vz_acc)) {
+      vz_fused = FUSION_VZ_FUSE_BETA * vz + (1.0f - FUSION_VZ_FUSE_BETA) * vz_acc;
+    } else if (!isnan(vz)) {
+      vz_fused = vz;
+    } else if (!isnan(vz_acc)) {
+      vz_fused = vz_acc;
+    }
+
     if (!s_alt_mutex) s_alt_mutex = xSemaphoreCreateMutex();
     if (s_alt_mutex) xSemaphoreTake(s_alt_mutex, portMAX_DELAY);
     s_fused_alt.bmp1_alt_m = bmp_alt;
@@ -173,6 +183,7 @@ static void fusion_task(void *param) {
     s_fused_alt.agl_ready = s_agl_ready;
     s_fused_alt.vz_mps = vz;
     s_fused_alt.vz_acc_mps = vz_acc;
+    s_fused_alt.vz_fused_mps = vz_fused;
     s_fused_alt.az_imu1_mps2 = az_e_mps2;
     s_fused_alt.temp_c = temp_c;
     s_fused_alt.press_hPa = press_hPa;
