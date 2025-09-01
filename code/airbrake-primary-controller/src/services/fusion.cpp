@@ -161,7 +161,22 @@ static void fusion_task(void *param) {
 
     // Euler from IMU1
     float yaw= NAN, pitch= NAN, roll= NAN;
-    if (vi) { quat_to_euler(u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3], yaw, pitch, roll); }
+    float tilt_deg = NAN, tilt_az_deg = NAN;
+    if (vi) {
+      quat_to_euler(u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3], yaw, pitch, roll);
+      // Tilt metrics robust near vertical: rotate body +X (nose) into Earth frame
+      const float x_body[3] = {1.0f, 0.0f, 0.0f};
+      float x_earth[3];
+      float q[4] = { u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3] };
+      rotate_vec_by_quat(q, x_body, x_earth);
+      // Angle from Earth Up (Z)
+      float cz = fmaxf(-1.0f, fminf(1.0f, x_earth[2]));
+      tilt_deg = acosf(cz) * 57.2957795f;
+      // Azimuth of tilt direction around Earth Z (atan2(y, x))
+      float h2 = x_earth[0]*x_earth[0] + x_earth[1]*x_earth[1];
+      if (h2 > 1e-6f) tilt_az_deg = atan2f(x_earth[1], x_earth[0]) * 57.2957795f; // East=0°, North=+90°
+      else tilt_az_deg = NAN; // near vertical, azimuth ill-defined
+    }
 
     // Fused vertical speed (complementary)
     float vz_fused = NAN;
@@ -190,6 +205,7 @@ static void fusion_task(void *param) {
     s_fused_alt.sos_mps = sos;
     s_fused_alt.mach_vz = mach_vz;
     s_fused_alt.yaw_deg = yaw; s_fused_alt.pitch_deg = pitch; s_fused_alt.roll_deg = roll;
+    s_fused_alt.tilt_deg = tilt_deg; s_fused_alt.tilt_az_deg = tilt_az_deg;
     s_fused_alt.t_apogee_s = t_apx;
     s_fused_alt.apogee_agl_m = z_apx;
     if (s_alt_mutex) xSemaphoreGive(s_alt_mutex);

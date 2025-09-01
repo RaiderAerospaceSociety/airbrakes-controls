@@ -33,6 +33,8 @@ struct FusedAlt {
   float mach_vz;        // |vz| / sos
   // Attitude
   float yaw_deg, pitch_deg, roll_deg; // from IMU1 quaternion
+  float tilt_deg;       // angle between +Xbody (nose) and Earth +Z (Up)
+  float tilt_az_deg;    // azimuth of tilt direction around Earth +Z (atan2(y,x))
   // Predictive
   float t_apogee_s;     // biased early
   float apogee_agl_m;   // biased low
