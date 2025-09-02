@@ -66,6 +66,11 @@ static void fusion_task(void *param) {
   static bool have_tilt_az_acc = false;
   static float tilt_az_prev_deg = 0.0f;
   static float tilt_az_unwrapped = 0.0f;
+  // Conservative SoS estimates (computed once when BMP valid)
+  static bool have_sos_refs = false;
+  static float sos_ground_mps = NAN;
+  static float sos_10kft_mps = NAN;
+  static float sos_min_mps = SOS_MIN_FLOOR_MPS;
   for (;;) {
     // Read raw altitudes
     bmp_reading_t b; bool vb = bmp390_get(b) && b.valid;
@@ -141,7 +146,7 @@ static void fusion_task(void *param) {
 #endif
     }
 
-    // Atmospherics: speed of sound from temperature
+    // Atmospherics: speed of sound from temperature (dynamic, for visibility)
     float temp_c = vb ? (float)b.temperature_c : NAN;
     float press_hPa = vb ? (float)(b.pressure_pa / 100.0) : NAN;
     float sos = NAN, mach_vz = NAN;
@@ -151,6 +156,28 @@ static void fusion_task(void *param) {
       const float R = 287.05f;
       sos = sqrtf(gamma * R * T);
       if (!isnan(vz)) mach_vz = fabsf(vz) / sos;
+    }
+
+    // Conservative SoS references: compute once from ground temp and estimate at +10kft
+    if (!have_sos_refs && vb) {
+      float T0 = (float)b.temperature_c + 273.15f;
+      const float gamma = 1.4f;
+      const float R = 287.05f;
+      sos_ground_mps = sqrtf(gamma * R * T0);
+      float T10k = T0 - SOS_10KFT_DELTA_K;
+      if (T10k < 150.0f) T10k = 150.0f; // clamp
+      sos_10kft_mps = sqrtf(gamma * R * T10k);
+      sos_min_mps = fmaxf(SOS_MIN_FLOOR_MPS, fminf(sos_ground_mps, sos_10kft_mps));
+      have_sos_refs = true;
+    }
+
+    // Conservative Mach proxy using worst-case tilt: v_body ≈ |vz_fused|/cos(tilt_max)
+    float mach_cons = NAN;
+    if (!isnan(vz_fused) && have_sos_refs) {
+      float c = cosf(TILT_MAX_DEPLOY_DEG * 0.01745329252f);
+      if (c < 0.1f) c = 0.1f; // avoid blow-up
+      float v_body = fabsf(vz_fused) / c;
+      mach_cons = v_body / sos_min_mps;
     }
 
     // Predictive: time to apogee and predicted apogee altitude (biased early/low)
@@ -230,6 +257,8 @@ static void fusion_task(void *param) {
 
     if (!s_alt_mutex) s_alt_mutex = xSemaphoreCreateMutex();
     if (s_alt_mutex) xSemaphoreTake(s_alt_mutex, portMAX_DELAY);
+    s_fused_alt.stamp_ms = now;
+    s_fused_alt.age_ms = 0;
     s_fused_alt.bmp1_alt_m = bmp_alt;
     s_fused_alt.imu1_alt_m = imu_alt;
     s_fused_alt.agl_bmp1_m = agl_bmp1;
@@ -244,6 +273,10 @@ static void fusion_task(void *param) {
     s_fused_alt.press_hPa = press_hPa;
     s_fused_alt.sos_mps = sos;
     s_fused_alt.mach_vz = mach_vz;
+    s_fused_alt.sos_ground_mps = sos_ground_mps;
+    s_fused_alt.sos_10kft_mps = sos_10kft_mps;
+    s_fused_alt.sos_min_mps = sos_min_mps;
+    s_fused_alt.mach_cons = mach_cons;
     s_fused_alt.yaw_deg = yaw; s_fused_alt.pitch_deg = pitch; s_fused_alt.roll_deg = roll;
     s_fused_alt.tilt_deg = tilt_deg; s_fused_alt.tilt_az_deg = tilt_az_deg;
     s_fused_alt.tilt_az_deg360 = tilt_az_deg360;

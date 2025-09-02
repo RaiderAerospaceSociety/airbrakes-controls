@@ -15,6 +15,9 @@ struct FusedImu {
 
 // Altitude-related derived values
 struct FusedAlt {
+  // Snapshot timing
+  uint32_t stamp_ms;     // when this fused snapshot was produced
+  uint32_t age_ms;       // age when read (consumer-computed; 0 here)
   float bmp1_alt_m;     // raw altitude from BMP1
   float imu1_alt_m;     // raw altitude from IMU1 internal baro
   float agl_bmp1_m;     // AGL from BMP1
@@ -31,6 +34,10 @@ struct FusedAlt {
   float press_hPa;      // BMP1 pressure (hPa)
   float sos_mps;        // speed of sound from temperature
   float mach_vz;        // |vz| / sos
+  float sos_ground_mps; // SoS computed at ground at startup
+  float sos_10kft_mps;  // SoS estimated at +10kft from ground temp
+  float sos_min_mps;    // conservative min SoS used for gating
+  float mach_cons;      // conservative Mach proxy using sos_min and worst-case tilt
   // Attitude
   float yaw_deg, pitch_deg, roll_deg; // from IMU1 quaternion
   float tilt_deg;       // angle between +Xbody (nose) and Earth +Z (Up)

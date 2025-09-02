@@ -74,6 +74,17 @@
 #define FUSION_TILT_AZ_MIN_TILT_DEG 2.0f // require at least this tilt to update azimuth
 #endif
 
+// Conservative Mach gating helpers ------------------------------------------
+#ifndef TILT_MAX_DEPLOY_DEG
+#define TILT_MAX_DEPLOY_DEG 20.0f   // worst-case tilt used for Mach along body proxy
+#endif
+#ifndef SOS_10KFT_DELTA_K
+#define SOS_10KFT_DELTA_K 19.8f     // ~6.5 K/km * 3.048 km; temp drop to 10k ft
+#endif
+#ifndef SOS_MIN_FLOOR_MPS
+#define SOS_MIN_FLOOR_MPS 300.0f    // absolute floor for conservative SoS (very cold)
+#endif
+
 // Telemetry & SD logging
 #ifndef USFS_PERIOD_MS
 #define USFS_PERIOD_MS 20
