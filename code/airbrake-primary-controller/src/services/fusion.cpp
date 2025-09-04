@@ -1,4 +1,7 @@
-// Fusion / derivation service implementation
+// ===== Fusion / Derivation Service =====
+// Brief: Computes fused AGL, vertical speeds, tilt, atmospherics; exposes snapshot.
+// Refs: docs/architecture.md, docs/signals.md
+//* -- Includes --
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -51,6 +54,7 @@ static uint32_t s_agl_arm_ms = 0;
 static float    s_base_bmp1_m = NAN;
 static float    s_base_imu1_m = NAN;
 
+//* -- Task --
 static void fusion_task(void *param) {
   const TickType_t period = pdMS_TO_TICKS(TELEM_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
@@ -100,7 +104,7 @@ static void fusion_task(void *param) {
       }
     }
 
-    // Vertical speed from AGL derivative (EMA)
+    //* Vertical speed from AGL derivative (EMA)
     float vz = NAN;
     float dt_s_for_step = NAN;
     if (s_agl_ready && !isnan(agl_fused)) {
@@ -126,7 +130,7 @@ static void fusion_task(void *param) {
       vz_filt = NAN;
     }
 
-    // Vertical accel from IMU1 (earth frame), and optionally integrate for vz
+    //* Vertical accel from IMU1 (earth frame), and optionally integrate for vz
     float az_e_mps2 = NAN;
     if (vi) {
       float v_b[3] = { u1.accel_g[0] * G0, u1.accel_g[1] * G0, u1.accel_g[2] * G0 };
@@ -146,7 +150,7 @@ static void fusion_task(void *param) {
 #endif
     }
 
-    // Atmospherics: speed of sound from temperature (dynamic, for visibility)
+    //* Atmospherics: speed of sound from temperature (dynamic, for visibility)
     float temp_c = vb ? (float)b.temperature_c : NAN;
     float press_hPa = vb ? (float)(b.pressure_pa / 100.0) : NAN;
     float sos = NAN, mach_vz = NAN;
@@ -158,7 +162,7 @@ static void fusion_task(void *param) {
       if (!isnan(vz)) mach_vz = fabsf(vz) / sos;
     }
 
-    // Conservative SoS references: compute once from ground temp and estimate at +10kft
+    //* Conservative SoS references: compute once from ground temp and estimate at +10kft
     if (!have_sos_refs && vb) {
       float T0 = (float)b.temperature_c + 273.15f;
       const float gamma = 1.4f;
@@ -171,10 +175,10 @@ static void fusion_task(void *param) {
       have_sos_refs = true;
     }
 
-    // Conservative Mach proxy using worst-case tilt: computed after vz_fused
+    //* Conservative Mach proxy using worst-case tilt: computed after vz_fused
     float mach_cons = NAN;
 
-    // Predictive: time to apogee and predicted apogee altitude (biased early/low)
+    //* Predictive: time to apogee and predicted apogee altitude (biased early/low)
     float t_apx = NAN, z_apx = NAN;
     if (s_agl_ready && !isnan(agl_fused) && !isnan(vz)) {
       if (vz > 0.0f) {
@@ -186,7 +190,7 @@ static void fusion_task(void *param) {
       }
     }
 
-    // Euler from IMU1
+    //* Euler from IMU1
     float yaw= NAN, pitch= NAN, roll= NAN;
     float tilt_deg = NAN, tilt_az_deg = NAN, tilt_az_deg360 = NAN, tilt_az_unwrapped_deg = NAN;
     if (vi) {

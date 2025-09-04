@@ -5,6 +5,26 @@ Layering
 - Lower layers must not depend on higher layers.
 
 Naming and Case
+
+Comment Conventions
+- File banner (top of each .h/.cpp):
+  - `// ===== <Module Name> =====`
+  - `// Brief: one-line summary`
+  - `// Refs: docs/...`
+- Section markers (vanilla, readable without plugins):
+  - `//* -- Includes --`
+  - `//* -- Globals --`
+  - `//* -- Task --`
+  - `//* -- API --`
+  - Keep markers short and consistent.
+- Better Comments coloring (optional but helpful):
+  - `//!` Alert/Caveat (red)
+  - `//*` Highlight/Section header (green)
+  - `//?` Question (blue)
+  - `// TODO(owner, yyyy-mm-dd):` actionable items (orange)
+  - `////` Deprecated/disabled blocks
+  - Normal notes use `// Note: ...`
+
 - Files (singular nouns by context): `sensor_imu1.cpp`, `sensor_bmp390.cpp`, `service_fusion.cpp`, `task_logger.cpp`.
 - Types (PascalCase): `Imu1Reading`, `BmpReading`, `TelemetryRecord`, `FusedAlt`.
 - Functions (camelCase, verbNoun): `imu1StartTask()`, `imu1Get()`, `bmp390StartTask()`, `fusionGetAlt()`.

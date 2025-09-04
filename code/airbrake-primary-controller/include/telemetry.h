@@ -4,6 +4,11 @@
 #include <stdint.h>
 
 #define TELEM_VERSION 1
+// TODO(telemetry, versioning): Bump TELEM_VERSION when field layout changes.
+// Checklist for bumps:
+//  - Update docs/telemetry.md and docs/signals.md
+//  - Note changes in commit message and PR description
+//  - Coordinate consumers (downstream tools/parsers)
 
 /** @brief Section presence bitmask (reserved for future dynamic enabling). */
 enum TelemetryPresent : uint32_t {

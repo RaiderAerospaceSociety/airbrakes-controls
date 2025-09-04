@@ -1,10 +1,12 @@
-// ANCHOR: Overview
-// SECTION - Core Includes ----------------------------------------------------
+// ===== Main Application =====
+// Brief: Initializes board, buses, and starts all tasks.
+// Refs: docs/architecture.md
+//* -- Includes --
 // Core
 #include <Arduino.h>
 #include <UMS3.h>
 
-// SECTION - App Includes -----------------------------------------------------
+//* -- App Includes --
 // App modules
 #include "app_config.h"
 #include "logging.h"
@@ -17,16 +19,16 @@
 #include "task_logger.h"
 #include "telemetry.h"
 #include "services/fusion.h"
-// !SECTION
+//
 
-// telemetryStartTasks() declared in telemetry.h
+// Note: telemetryStartTasks() declared in telemetry.h
 
-// SECTION - Globals ----------------------------------------------------------
-// NOTE: Define the board object here so tasks can use it via board.h extern
+//* -- Globals --
+// Note: Define the board object here so tasks can use it via board.h extern
 UMS3 ums3;
-// !SECTION
+//
 
-// SECTION - Setup ------------------------------------------------------------
+//* -- Setup --
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
@@ -54,10 +56,10 @@ void setup() {
   svc::fusionStartTask();
   loggerStartTask();
 }
-// !SECTION
+//
 
-// SECTION - Loop -------------------------------------------------------------
+//* -- Loop --
 void loop() {
   vTaskDelay(portMAX_DELAY);
 }
-// !SECTION
+//

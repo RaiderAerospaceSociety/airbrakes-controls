@@ -1,4 +1,6 @@
-// LED animation task
+// ===== LED Task =====
+// Brief: Simple color sweep during run (placeholder for boot animation).
+//* -- Includes --
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -15,6 +17,7 @@ static void task_led(void *param) {
   }
 }
 
+//* -- API --
 void ledStartTask() {
   xTaskCreatePinnedToCore(task_led, "led", TASK_STACK_LED, nullptr, TASK_PRIO_LED, nullptr, APP_CPU_NUM);
 }

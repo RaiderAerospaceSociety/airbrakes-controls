@@ -1,5 +1,7 @@
-// ANCHOR: Overview
-// SECTION - Includes ---------------------------------------------------------
+// ===== Telemetry Aggregator =====
+// Brief: Builds periodic snapshot for monitoring and (optional) SD logging.
+// Refs: docs/telemetry.md, docs/signals.md
+//* -- Includes --
 // Telemetry aggregator and (optional) SD logger queue
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -19,16 +21,17 @@
 #include <SD.h>
 #endif
 
-// SECTION - Module Globals ---------------------------------------------------
+//* -- Module Globals --
 static SemaphoreHandle_t s_telem_mutex = nullptr;
 static TelemetryRecord   s_latest = {};
-// !SECTION
+//
 
 #if LOG_BINARY_ON_SD
 static QueueHandle_t     s_telem_q = nullptr;
 static File              s_log_file;
 #endif
 
+//* -- Helpers --
 static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t len) {
   crc ^= 0xFFFFFFFFu;
   for (size_t i = 0; i < len; i++) {
@@ -42,6 +45,7 @@ static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t len) {
   return crc ^ 0xFFFFFFFFu;
 }
 
+//* -- Build Snapshot --
 static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   memset(&rec, 0, sizeof(rec));
   rec.hdr.magic0 = 0xAB;
@@ -98,7 +102,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
 #endif
 }
 
-// SECTION - Tasks ------------------------------------------------------------
+//* -- Tasks --
 static void task_telem_agg(void *param) {
   if (!s_telem_mutex) s_telem_mutex = xSemaphoreCreateMutex();
   uint32_t seq = 0;
@@ -156,6 +160,7 @@ static void task_sd_writer(void *param) {
 #endif
 // !SECTION
 
+//* -- API --
 bool telemetryGetLatest(TelemetryRecord &out) {
   if (s_telem_mutex) xSemaphoreTake(s_telem_mutex, portMAX_DELAY);
   out = s_latest;

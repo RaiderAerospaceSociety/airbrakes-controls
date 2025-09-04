@@ -1,10 +1,8 @@
-// ANCHOR: Overview
-// SECTION - App Configuration ------------------------------------------------
-// Application configuration and tuning
-//
-// This header centralizes build-time tunables for task periods, smoothing
-// constants, and safety limits. Override any macro via PlatformIO build_flags,
-// e.g., -D ZERO_AGL_AFTER_MS=8000. Units are documented per flag.
+// ===== App Configuration =====
+// Brief: Build-time tunables for periods, smoothing, and safety limits.
+// Note: Override via PlatformIO build_flags (e.g., -D ZERO_AGL_AFTER_MS=8000).
+//* -- Overview --
+// Units are documented per flag.
 #pragma once
 
 // Debug toggle (can also be set via -D DEBUG_ENABLED=0/1)

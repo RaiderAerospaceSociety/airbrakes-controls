@@ -1,4 +1,7 @@
-// IMU2: MPU6050 task using Adafruit library
+// ===== IMU2 Sensor Task (MPU6050) =====
+// Brief: Polls MPU6050 (I2C) for accel, gyro, and temp; maps to body frame.
+// Refs: docs/sensors/mpu6050.md
+//* -- Includes --
 #include <Arduino.h>
 #include <Wire.h>
 #include <freertos/FreeRTOS.h>

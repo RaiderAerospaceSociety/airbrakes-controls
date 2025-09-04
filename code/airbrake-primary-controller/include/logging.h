@@ -1,6 +1,6 @@
-// ANCHOR: Overview
-// SECTION - Logging API ------------------------------------------------------
-// Mutex-guarded Serial logging and debug macros
+// ===== Logging API =====
+// Brief: Mutex-guarded Serial logging macros for thread-safe prints.
+//* -- Overview --
 #pragma once
 
 #include <Arduino.h>

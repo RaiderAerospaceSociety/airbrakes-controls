@@ -1,5 +1,7 @@
-// ANCHOR: Overview
-// SECTION - Includes ---------------------------------------------------------
+// ===== Logger Task =====
+// Brief: Emits labeled values for VS Code Serial Plotter.
+// Refs: docs/monitoring.md, docs/signals.md
+//* -- Includes --
 // Logger task: periodically prints sensor readings
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -14,7 +16,7 @@
 #include "services/fusion.h"
 // !SECTION
 
-// SECTION - Task -------------------------------------------------------------
+//* -- Task --
 // #if SERIAL_PLOTTER_MODE
 
 static void task_logger(void *param) {

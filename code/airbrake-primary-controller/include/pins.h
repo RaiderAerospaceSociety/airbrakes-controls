@@ -1,5 +1,6 @@
-// ANCHOR: Overview
-// SECTION - Pins Map ---------------------------------------------------------
+// ===== Pins Map =====
+// Brief: Centralized pin map with override-friendly macros.
+//* -- Overview --
 // Centralized pin map with override-friendly macros.
 // You can override any of these via PlatformIO build_flags, e.g.:
 //   -D PIN_SDA1=8 -D PIN_SCL1=9 -D PIN_SCK1=36 -D PIN_MISO1=37 -D PIN_MOSI1=35 -D PIN_CS_BMP1=5

@@ -1,3 +1,6 @@
+// ===== Bus Setup & Utilities =====
+// Brief: Initializes I2C/SPI buses and provides an I2C scan helper.
+//* -- Includes --
 #include <Arduino.h>
 #include <Wire.h>
 #include <freertos/FreeRTOS.h>
@@ -8,6 +11,7 @@
 SemaphoreHandle_t g_spi_mutex = nullptr;
 SemaphoreHandle_t g_i2c_mutex = nullptr;
 
+//* -- API --
 void bus_scan_i2c() {
 #if DEBUG_ENABLED
   LOGF("I2C scan on SDA:%d SCL:%d (clk=%lu Hz)\n", PIN_SDA1, PIN_SCL1, (unsigned long)Wire.getClock());

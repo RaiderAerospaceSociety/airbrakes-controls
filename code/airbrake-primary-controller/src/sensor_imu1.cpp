@@ -1,5 +1,7 @@
-// ANCHOR: Overview
-// SECTION - Includes ---------------------------------------------------------
+// ===== IMU1 Sensor Task (USFSMAX) =====
+// Brief: Polls USFSMAX (I2C) for quaternion, accel, and internal baro.
+// Refs: docs/sensors/usfsmax.md, docs/signals.md
+//* -- Includes --
 // USFSMAX reader using upstream library (USFSMAX + I2Cdev)
 #include <Arduino.h>
 #include <Wire.h>
@@ -13,9 +15,9 @@
 #include "bus.h"
 #include "sensor_imu1.h"
 
-// SECTION - Library Bridge ---------------------------------------------------
+//* -- Library Bridge --
 #include <USFSMAX.h>
-// !SECTION
+//
 
 extern float qt[2][4];
 extern int16_t accADC[2][3];
@@ -24,14 +26,15 @@ extern float heading[2];
 extern float angle[2][2];
 extern int32_t baroADC[2];
 
-// SECTION - Module Globals ---------------------------------------------------
+//* -- Module Globals --
 static SemaphoreHandle_t s_usfs_mutex = nullptr; // protect local snapshot
 static imu1_reading_t s_latest = {0};
 
 static I2Cdev s_i2c(&Wire);
 static USFSMAX s_usfs(&s_i2c, 0);
-// !SECTION
+//
 
+//* -- Task --
 static void usfs_task(void *param) {
   if (!s_usfs_mutex) s_usfs_mutex = xSemaphoreCreateMutex();
 
@@ -51,7 +54,7 @@ static void usfs_task(void *param) {
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
-  // SECTION - Main Task Loop -------------------------------------------------
+  //* -- Main Task Loop --
   static float last_pressure_pa = NAN;
   static float last_altitude_m  = NAN;
   for (;;) {
@@ -95,7 +98,7 @@ static void usfs_task(void *param) {
       s_usfs.getEULER();
     }
 
-    // SECTION - Snapshot Build ----------------------------------------------
+    //* -- Snapshot Build --
     imu1_reading_t r;
     r.quat[0] = qt[0][0];
     r.quat[1] = qt[0][1];
@@ -120,11 +123,11 @@ static void usfs_task(void *param) {
     } else {
       s_latest = r;
     }
-    // !SECTION
+    //
     vTaskDelayUntil(&last, period);
   }
 }
-// !SECTION
+//
 
 void imu1StartTask() {
   xTaskCreatePinnedToCore(usfs_task, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);

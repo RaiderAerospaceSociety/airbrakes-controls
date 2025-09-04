@@ -1,6 +1,6 @@
-// ANCHOR: Overview
-// SECTION - Bus API ----------------------------------------------------------
-// Shared bus setup and mutexes
+// ===== Bus API =====
+// Brief: Shared bus setup and mutexes for I2C/SPI operations.
+//* -- Overview --
 #pragma once
 
 #include <Arduino.h>
