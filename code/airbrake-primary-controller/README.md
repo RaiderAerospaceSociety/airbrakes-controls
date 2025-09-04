@@ -21,15 +21,15 @@ Repository layout
 - `docs/` — Guides: setup, wiring, monitoring, data model, and conventions.
 
 Start here
-- Setup and wiring: `docs/setup.md`, `docs/wiring.md`.
-- Signals and plotting: `docs/monitoring.md` and `docs/signals.md` (new).
-- Architecture and data flow: `docs/architecture.md`.
-- Coding conventions and style: `docs/contrib-style.md` (updated with naming + units).
+- Setup and wiring: [`docs/setup.md`](docs/setup.md), [`docs/wiring.md`](docs/wiring.md).
+- Signals and plotting: [`docs/monitoring.md`](docs/monitoring.md) and [`docs/signals.md`](docs/signals.md).
+- Architecture and data flow: [`docs/architecture.md`](docs/architecture.md).
+- Coding conventions and style: [`docs/contrib-style.md`](docs/contrib-style.md) (naming + units).
 
 Configuration
-- Most tunables live in `include/app_config.h` (periods, smoothing constants, safety limits).
+- Most tunables live in [`include/app_config.h`](include/app_config.h) (periods, smoothing constants, safety limits).
 - Build‑time overrides can be set via PlatformIO `build_flags`.
-- See `docs/config.md` for a compact reference.
+- See [`docs/config.md`](docs/config.md) for a compact reference.
 
 Notes
 - All internal math uses quaternions for robustness; Euler angles are for display.
@@ -37,7 +37,7 @@ Notes
 - Do not change behavior in refactors without tests; see docs for layering and thread‑safety rules.
 
 Links
-- Architecture: `docs/architecture.md`
-- Conventions/Style: `docs/contrib-style.md`
-- Monitoring/Signals: `docs/monitoring.md`, `docs/signals.md`
-- Data Model/Telemetry: `docs/data-model.md`, `docs/telemetry.md`
+- Architecture: [`docs/architecture.md`](docs/architecture.md)
+- Conventions/Style: [`docs/contrib-style.md`](docs/contrib-style.md)
+- Monitoring/Signals: [`docs/monitoring.md`](docs/monitoring.md), [`docs/signals.md`](docs/signals.md)
+- Data Model/Telemetry: [`docs/data-model.md`](docs/data-model.md), [`docs/telemetry.md`](docs/telemetry.md)
