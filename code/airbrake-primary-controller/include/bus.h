@@ -10,9 +10,12 @@
 #include <freertos/semphr.h>
 #include "pins.h"
 
+/** @brief Global SPI bus mutex (protects SPI transactions). */
 extern SemaphoreHandle_t g_spi_mutex;
+/** @brief Global I2C bus mutex (protects Wire transactions). */
 extern SemaphoreHandle_t g_i2c_mutex;
 
+/** @brief Initialize I2C and SPI buses and create mutexes (idempotent). */
 inline void bus_setup() {
   // Create mutexes
   if (!g_spi_mutex) g_spi_mutex = xSemaphoreCreateMutex();
@@ -26,6 +29,6 @@ inline void bus_setup() {
   SPI.begin(PIN_SCK1, PIN_MISO1, PIN_MOSI1, PIN_CS_BMP1);
 }
 
-// Scan the I2C bus and print discovered device addresses (debug-friendly)
+/** @brief Scan the I2C bus and print discovered addresses (debug-friendly). */
 void bus_scan_i2c();
 // !SECTION

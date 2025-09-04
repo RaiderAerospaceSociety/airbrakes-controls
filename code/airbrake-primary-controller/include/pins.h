@@ -7,9 +7,11 @@
 #pragma once
 
 // I2C
+/** @brief I2C SDA pin number (override via -D PIN_SDA1=...). */
 #ifndef PIN_SDA1
 #define PIN_SDA1 33   // Feather S3 typical SDA
 #endif
+/** @brief I2C SCL pin number (override via -D PIN_SCL1=...). */
 #ifndef PIN_SCL1
 #define PIN_SCL1 38   // Feather S3 typical SCL
 #endif
