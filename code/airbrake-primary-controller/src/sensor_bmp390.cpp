@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "bus.h"
 #include "pins.h"
-#include "sensors_bmp390.h"
+#include "sensor_bmp390.h"
 // !SECTION
 
 // SECTION - Module Globals ---------------------------------------------------

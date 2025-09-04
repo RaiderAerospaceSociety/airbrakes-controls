@@ -27,3 +27,4 @@ void imu1_start_task();
  *  @return true if data is valid.
  */
 bool imu1_get(imu1_reading_t &out);
+

@@ -25,3 +25,4 @@ void bmp390_start_task();
  *  @return true if data is valid.
  */
 bool bmp390_get(bmp_reading_t &out);
+

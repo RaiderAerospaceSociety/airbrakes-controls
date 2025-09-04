@@ -7,9 +7,9 @@
 
 #include "app_config.h"
 #include "logging.h"
-#include "sensors_bmp390.h"
-#include "sensors_imu1.h"
-#include "sensors_imu2.h"
+#include "sensor_bmp390.h"
+#include "sensor_imu1.h"
+#include "sensor_imu2.h"
 #include "telemetry.h"
 #include "services/fusion.h"
 // !SECTION

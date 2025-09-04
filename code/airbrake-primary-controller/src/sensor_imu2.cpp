@@ -9,7 +9,7 @@
 #include "app_config.h"
 #include "logging.h"
 #include "bus.h"
-#include "sensors_imu2.h"
+#include "sensor_imu2.h"
 #include "config/sensors_config.h"
 
 #include <Adafruit_MPU6050.h>

@@ -11,7 +11,7 @@
 #include "app_config.h"
 #include "logging.h"
 #include "bus.h"
-#include "sensors_imu1.h"
+#include "sensor_imu1.h"
 
 // SECTION - Library Bridge ---------------------------------------------------
 #include <USFSMAX.h>
