@@ -171,14 +171,8 @@ static void fusion_task(void *param) {
       have_sos_refs = true;
     }
 
-    // Conservative Mach proxy using worst-case tilt: v_body ≈ |vz_fused|/cos(tilt_max)
+    // Conservative Mach proxy using worst-case tilt: computed after vz_fused
     float mach_cons = NAN;
-    if (!isnan(vz_fused) && have_sos_refs) {
-      float c = cosf(TILT_MAX_DEPLOY_DEG * 0.01745329252f);
-      if (c < 0.1f) c = 0.1f; // avoid blow-up
-      float v_body = fabsf(vz_fused) / c;
-      mach_cons = v_body / sos_min_mps;
-    }
 
     // Predictive: time to apogee and predicted apogee altitude (biased early/low)
     float t_apx = NAN, z_apx = NAN;
@@ -253,6 +247,14 @@ static void fusion_task(void *param) {
       vz_fused = vz;
     } else if (!isnan(vz_acc)) {
       vz_fused = vz_acc;
+    }
+
+    // Conservative Mach proxy now that vz_fused is known
+    if (!isnan(vz_fused) && have_sos_refs) {
+      float c = cosf(TILT_MAX_DEPLOY_DEG * 0.01745329252f);
+      if (c < 0.1f) c = 0.1f; // avoid blow-up
+      float v_body = fabsf(vz_fused) / c;
+      mach_cons = v_body / sos_min_mps;
     }
 
     if (!s_alt_mutex) s_alt_mutex = xSemaphoreCreateMutex();
