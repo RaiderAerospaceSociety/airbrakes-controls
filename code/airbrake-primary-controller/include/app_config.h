@@ -66,7 +66,7 @@
 #define FUSION_USE_ACC_INT 1       // compute experimental vz from accel integration
 #endif
 #ifndef FUSION_VZ_FUSE_BETA
-#define FUSION_VZ_FUSE_BETA 0.8f   // fused vz = beta*baro + (1-beta)*acc
+#define FUSION_VZ_FUSE_BETA 0.2f   // fused vz = beta*baro + (1-beta)*acc (favor IMU1)
 #endif
 // Tilt azimuth smoothing (unit-vector EMA) and validity threshold
 #ifndef FUSION_TILT_AZ_ALPHA
