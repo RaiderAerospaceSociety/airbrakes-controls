@@ -19,7 +19,7 @@
 #include "services/fusion.h"
 // !SECTION
 
-extern "C" void telemetry_start_tasks();
+// telemetryStartTasks() declared in telemetry.h
 
 // SECTION - Globals ----------------------------------------------------------
 // NOTE: Define the board object here so tasks can use it via board.h extern
@@ -47,12 +47,12 @@ void setup() {
   ums3.setPixelColor(LED_RUN_COLOR);
 
   // Start tasks
-  telemetry_start_tasks();
-  bmp390_start_task();
-  imu1_start_task();
-  imu2_start_task();
-  svc::fusion_start_task();
-  logger_start_task();
+  telemetryStartTasks();
+  bmp390StartTask();
+  imu1StartTask();
+  imu2StartTask();
+  svc::fusionStartTask();
+  loggerStartTask();
 }
 // !SECTION
 

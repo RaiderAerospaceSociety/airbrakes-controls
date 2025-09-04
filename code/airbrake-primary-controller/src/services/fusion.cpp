@@ -73,8 +73,8 @@ static void fusion_task(void *param) {
   static float sos_min_mps = SOS_MIN_FLOOR_MPS;
   for (;;) {
     // Read raw altitudes
-    bmp_reading_t b; bool vb = bmp390_get(b) && b.valid;
-    imu1_reading_t u1; bool vi = imu1_get(u1) && u1.valid;
+    bmp_reading_t b; bool vb = bmp390Get(b) && b.valid;
+    imu1_reading_t u1; bool vi = imu1Get(u1) && u1.valid;
     float bmp_alt = vb ? (float)b.altitude_m : NAN;
     float imu_alt = vi ? u1.altitude_m : NAN;
 
@@ -291,12 +291,12 @@ static void fusion_task(void *param) {
   }
 }
 
-void fusion_start_task() {
+void fusionStartTask() {
   if (!s_alt_mutex) s_alt_mutex = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(fusion_task, "fusion", 3072, nullptr, 1, nullptr, APP_CPU_NUM);
 }
 
-bool fusion_get_alt(FusedAlt &out) {
+bool fusionGetAlt(FusedAlt &out) {
   if (s_alt_mutex) xSemaphoreTake(s_alt_mutex, portMAX_DELAY);
   out = s_fused_alt;
   if (s_alt_mutex) xSemaphoreGive(s_alt_mutex);

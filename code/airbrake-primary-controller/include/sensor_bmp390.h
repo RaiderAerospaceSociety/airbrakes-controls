@@ -18,11 +18,10 @@ typedef struct {
 } bmp_reading_t;
 
 /** @brief Start the BMP390 polling task (SPI). */
-void bmp390_start_task();
+void bmp390StartTask();
 
 /** @brief Copy the latest BMP390 reading.
  *  @param out Filled with the latest reading (see units above).
  *  @return true if data is valid.
  */
-bool bmp390_get(bmp_reading_t &out);
-
+bool bmp390Get(bmp_reading_t &out);

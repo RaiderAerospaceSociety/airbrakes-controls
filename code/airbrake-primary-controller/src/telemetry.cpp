@@ -53,7 +53,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   rec.hdr.present_flags = TP_BMP390 | TP_IMU1 | TP_IMU2 | TP_SYSTEM | TP_CONTROL;
 
   bmp_reading_t bmp;
-  if (bmp390_get(bmp) && bmp.valid) {
+  if (bmp390Get(bmp) && bmp.valid) {
     rec.bmp390.temperature_c = bmp.temperature_c;
     rec.bmp390.pressure_pa   = bmp.pressure_pa;
     rec.bmp390.altitude_m    = bmp.altitude_m;
@@ -61,7 +61,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   }
 
   imu1_reading_t u1;
-  if (imu1_get(u1) && u1.valid) {
+  if (imu1Get(u1) && u1.valid) {
     rec.imu1.quat[0] = u1.quat[0];
     rec.imu1.quat[1] = u1.quat[1];
     rec.imu1.quat[2] = u1.quat[2];
@@ -71,7 +71,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   }
 
   imu2_reading_t u2;
-  if (imu2_get(u2) && u2.valid) {
+  if (imu2Get(u2) && u2.valid) {
     rec.imu2.accel_g[0] = u2.accel_g[0];
     rec.imu2.accel_g[1] = u2.accel_g[1];
     rec.imu2.accel_g[2] = u2.accel_g[2];
@@ -156,14 +156,14 @@ static void task_sd_writer(void *param) {
 #endif
 // !SECTION
 
-bool telemetry_get_latest(TelemetryRecord &out) {
+bool telemetryGetLatest(TelemetryRecord &out) {
   if (s_telem_mutex) xSemaphoreTake(s_telem_mutex, portMAX_DELAY);
   out = s_latest;
   if (s_telem_mutex) xSemaphoreGive(s_telem_mutex);
   return true;
 }
 
-extern "C" void telemetry_start_tasks() {
+extern "C" void telemetryStartTasks() {
   xTaskCreatePinnedToCore(task_telem_agg, "telem", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 #if LOG_BINARY_ON_SD
   if (!s_telem_q) s_telem_q = xQueueCreate(128, sizeof(TelemetryRecord));

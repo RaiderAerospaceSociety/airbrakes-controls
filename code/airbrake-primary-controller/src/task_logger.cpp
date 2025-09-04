@@ -22,8 +22,8 @@ static void task_logger(void *param) {
   TickType_t last = xTaskGetTickCount();
   for (;;) {
     // VS Code Serial Plotter format: ">label:value,label:value"
-    TelemetryRecord rec; telemetry_get_latest(rec);
-    svc::FusedAlt f; svc::fusion_get_alt(f);
+    TelemetryRecord rec; telemetryGetLatest(rec);
+    svc::FusedAlt f; svc::fusionGetAlt(f);
     bool agl_ready = f.agl_ready;
 
     Serial.print(">bmp1_alt_m:"); Serial.print(f.bmp1_alt_m, 3);
@@ -291,6 +291,6 @@ static void task_logger(void *param) {
 // #endif
 // !SECTION
 
-void logger_start_task() {
+void loggerStartTask() {
   xTaskCreatePinnedToCore(task_logger, "logger", TASK_STACK_LOGGER, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 }

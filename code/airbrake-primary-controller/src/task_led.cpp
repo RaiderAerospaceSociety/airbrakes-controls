@@ -15,7 +15,6 @@ static void task_led(void *param) {
   }
 }
 
-void led_start_task() {
+void ledStartTask() {
   xTaskCreatePinnedToCore(task_led, "led", TASK_STACK_LED, nullptr, TASK_PRIO_LED, nullptr, APP_CPU_NUM);
 }
-

@@ -20,11 +20,10 @@ typedef struct {
 } imu1_reading_t;
 
 /** @brief Start the IMU1 (USFSMAX) polling task. */
-void imu1_start_task();
+void imu1StartTask();
 
 /** @brief Copy the latest IMU1 reading.
  *  @param out Filled with latest values (see units above).
  *  @return true if data is valid.
  */
-bool imu1_get(imu1_reading_t &out);
-
+bool imu1Get(imu1_reading_t &out);

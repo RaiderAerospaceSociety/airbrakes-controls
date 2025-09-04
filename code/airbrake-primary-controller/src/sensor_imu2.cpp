@@ -83,11 +83,11 @@ static void imu2_task(void *param) {
   }
 }
 
-void imu2_start_task() {
+void imu2StartTask() {
   xTaskCreatePinnedToCore(imu2_task, "imu2", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool imu2_get(imu2_reading_t &out) {
+bool imu2Get(imu2_reading_t &out) {
   bool v;
   if (s_mutex) xSemaphoreTake(s_mutex, portMAX_DELAY);
   out = s_latest;

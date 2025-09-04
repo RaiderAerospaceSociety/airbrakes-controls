@@ -73,12 +73,12 @@ static void task_sensor_bmp1(void *param) {
 // !SECTION
 
 // SECTION - API --------------------------------------------------------------
-void bmp390_start_task() {
+void bmp390StartTask() {
   if (!s_data_mutex) s_data_mutex = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(task_sensor_bmp1, "bmp1", TASK_STACK_BMP390, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool bmp390_get(bmp_reading_t &out) {
+bool bmp390Get(bmp_reading_t &out) {
   bool valid;
   if (s_data_mutex) xSemaphoreTake(s_data_mutex, portMAX_DELAY);
   out = s_latest;

@@ -57,13 +57,13 @@ struct FusedAlt {
 };
 
 /** @brief Start the background fusion/derivation task. */
-void fusion_start_task();
+void fusionStartTask();
 
 /** @brief Copy the latest fused/derived snapshot.
  *  @param out Filled with latest values (see units above).
  *  @return true if snapshot available.
  */
-bool fusion_get_alt(FusedAlt &out);
+bool fusionGetAlt(FusedAlt &out);
 
 // Legacy placeholders
 void fusion_init();

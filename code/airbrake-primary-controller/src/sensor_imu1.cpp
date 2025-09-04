@@ -126,11 +126,11 @@ static void usfs_task(void *param) {
 }
 // !SECTION
 
-void imu1_start_task() {
+void imu1StartTask() {
   xTaskCreatePinnedToCore(usfs_task, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool imu1_get(imu1_reading_t &out) {
+bool imu1Get(imu1_reading_t &out) {
   bool v;
   if (s_usfs_mutex) xSemaphoreTake(s_usfs_mutex, portMAX_DELAY);
   out = s_latest;

@@ -92,8 +92,8 @@ struct TelemetryRecord {
 /** @brief Copy the most recent telemetry snapshot into out.
  *  @return true if a snapshot was available.
  */
-bool telemetry_get_latest(TelemetryRecord &out);
+bool telemetryGetLatest(TelemetryRecord &out);
 
 /** @brief Start telemetry-related FreeRTOS tasks (aggregator and optional SD logger). */
-extern "C" void telemetry_start_tasks();
+extern "C" void telemetryStartTasks();
 #endif

@@ -18,10 +18,9 @@ typedef struct {
 } imu2_reading_t;
 
 /** @brief Start the IMU2 (MPU6050) polling task. */
-void imu2_start_task();
+void imu2StartTask();
 /** @brief Copy the latest IMU2 reading.
  *  @param out Filled with latest values (see units above).
  *  @return true if data is valid.
  */
-bool imu2_get(imu2_reading_t &out);
-
+bool imu2Get(imu2_reading_t &out);
