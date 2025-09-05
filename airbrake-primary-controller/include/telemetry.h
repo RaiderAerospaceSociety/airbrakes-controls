@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define TELEM_VERSION 1
+#define TELEM_VERSION 2
 // TODO(telemetry, versioning): Bump TELEM_VERSION when field layout changes.
 // Checklist for bumps:
 //  - Update docs/telemetry.md and docs/signals.md
@@ -71,6 +71,7 @@ struct TelemetrySystem {
   uint8_t  fc_state;       ///< Airbrake FSM state
   uint8_t  _pad0;
   float    cpu_temp_c;     ///< CPU temperature (C)
+  uint32_t fc_flags;       ///< Controller flags (bitmask)
 };
 
 /** @brief Control surfaces / actuator telemetry. */

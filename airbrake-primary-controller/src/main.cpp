@@ -19,6 +19,7 @@
 #include "task_logger.h"
 #include "telemetry.h"
 #include "services/fusion.h"
+#include "services/fc.h"
 //
 
 // Note: telemetryStartTasks() declared in telemetry.h
@@ -54,6 +55,7 @@ void setup() {
   imu1StartTask();
   imu2StartTask();
   svc::fusionStartTask();
+  svc::fcStartTask();
   loggerStartTask();
 }
 //

@@ -14,6 +14,7 @@
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "logging.h"
+#include "services/fc.h"
 // !SECTION
 
 #if LOG_BINARY_ON_SD
@@ -89,10 +90,20 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq) {
   rec.sys.vbat_mv = 0; // TODO: wire ADC later
   rec.sys.i2c_errs = 0;
   rec.sys.spi_errs = 0;
-  rec.sys.fc_state = 0;
+  {
+    svc::FcStatus st;
+    if (svc::fcGetStatus(st)) {
+      rec.sys.fc_state = st.state;
+      rec.sys.fc_flags = st.flags;
+      rec.ctl.airbrake_cmd_deg = st.airbrake_cmd_deg;
+    } else {
+      rec.sys.fc_state = 0;
+      rec.sys.fc_flags = 0;
+      rec.ctl.airbrake_cmd_deg = 0.0f;
+    }
+  }
   rec.sys.cpu_temp_c = 0.0f;
 
-  rec.ctl.airbrake_cmd_deg = 0.0f;
   rec.ctl.airbrake_actual_deg = 0.0f;
 
 #if LOG_INCLUDE_CRC
