@@ -3,18 +3,18 @@
 This repository houses firmware, electronics, and references for the 2025–2026 Airbrakes‑Controls joint project.
 
 Quick Links
-- Airbrake Primary Controller (firmware): [`code/airbrake-primary-controller/`](code/airbrake-primary-controller/)
+- Airbrake Primary Controller (firmware): [`airbrake-primary-controller/`](airbrake-primary-controller/)
 - Board design files: [`board-design/`](board-design/)
-- Setup and docs (in firmware project): [`code/airbrake-primary-controller/docs/`](code/airbrake-primary-controller/docs/)
+- Setup and docs (in firmware project): [`airbrake-primary-controller/docs/`](airbrake-primary-controller/docs/)
 
 Getting Started
 1) If you’re here for the flight computer firmware, go to:
-   - [`code/airbrake-primary-controller/`](code/airbrake-primary-controller/)
+   - [`airbrake-primary-controller/`](airbrake-primary-controller/)
    - Read that project’s `README.md` for build/flash/plotting instructions (PlatformIO + VS Code).
 2) For hardware/board work, open `board-design/`.
 
 Repository Structure
-- [`code/`](code/) — Source code projects (primary controller and supporting tools)
+- [`airbrake-primary-controller/`](airbrake-primary-controller/) — Firmware source (PlatformIO project)
 - [`board-design/`](board-design/) — Schematic/PCB design assets
 
 Contributing
