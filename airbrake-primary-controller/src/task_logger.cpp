@@ -46,9 +46,9 @@ static void task_logger(void *param) {
     Serial.print(",mach_vz:"); Serial.print(f.mach_vz, 4);
     Serial.print(",sos_min_mps:"); Serial.print(f.sos_min_mps, 3);
     Serial.print(",mach_cons:"); Serial.print(f.mach_cons, 4);
-    Serial.print(",yaw_deg:"); Serial.print(f.yaw_deg, 2);
-    Serial.print(",pitch_deg:"); Serial.print(f.pitch_deg, 2);
-    Serial.print(",roll_deg:"); Serial.print(f.roll_deg, 2);
+    // Serial.print(",yaw_deg:"); Serial.print(f.yaw_deg, 2);
+    // Serial.print(",pitch_deg:"); Serial.print(f.pitch_deg, 2);
+    // Serial.print(",roll_deg:"); Serial.print(f.roll_deg, 2);
     Serial.print(",tilt_deg:"); Serial.print(f.tilt_deg, 2);
     Serial.print(",tilt_az_deg360:"); Serial.print(f.tilt_az_deg360, 2);
     Serial.print(",t_apogee_s:"); Serial.print(f.t_apogee_s, 3);
