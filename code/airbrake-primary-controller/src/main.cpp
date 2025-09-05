@@ -43,7 +43,7 @@ void setup() {
   ums3.begin();
   ums3.setPixelBrightness(255 / 3);
   ums3.setPixelPower(true);
-  delay(100);
+  delay(50);
 
   // Boot-up pixel sequence then steady green while running
   ums3.setPixelColor(LED_RUN_COLOR);
