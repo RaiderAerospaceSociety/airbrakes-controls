@@ -41,6 +41,10 @@
 #ifndef LED_PERIOD_MS
 #define LED_PERIOD_MS 15
 #endif
+// Default LED mode (see include/task_led.h)
+#ifndef LED_MODE_DEFAULT
+#define LED_MODE_DEFAULT 1  // 0=STATUS, 1=SENSORS, 2=TILT
+#endif
 // Zero AGL baseline after this many ms from boot
 #ifndef ZERO_AGL_AFTER_MS
 #define ZERO_AGL_AFTER_MS 10000
