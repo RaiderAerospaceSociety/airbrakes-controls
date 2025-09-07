@@ -32,6 +32,7 @@ static TelemetryRecord   s_latest = {};
 #if LOG_BINARY_ON_SD
 static QueueHandle_t     s_telem_q = nullptr;
 static File              s_log_file;
+static TelemetryRecord  *s_sd_batch = nullptr; // heap buffer to avoid task stack overflow
 #endif
 
 //* -- Helpers --
@@ -144,35 +145,60 @@ static void task_sd_writer(void *param) {
     return;
   }
   if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
-  s_log_file = SD.open("log.bin", FILE_WRITE);
+  // Use absolute path. Append if exists, else create
+  if (SD.exists("/log.bin")) {
+    s_log_file = SD.open("/log.bin", FILE_APPEND);
+  } else {
+    s_log_file = SD.open("/log.bin", FILE_WRITE);
+  }
   if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
   if (!s_log_file) {
-    LOGLN("SD open failed: log.bin");
+    LOGLN("SD open failed: /log.bin");
     vTaskDelete(NULL);
     return;
   }
-  TelemetryRecord batch[LOG_BATCH_MAX_RECORDS];
+  // Allocate batch buffer on the heap to keep task stack small
+  if (!s_sd_batch) {
+    s_sd_batch = (TelemetryRecord*)pvPortMalloc(LOG_BATCH_MAX_RECORDS * sizeof(TelemetryRecord));
+    if (!s_sd_batch) {
+      LOGLN("SD: batch alloc failed; falling back to single-record writes");
+    }
+  }
   for (;;) {
     size_t n = 0;
     uint32_t t0 = millis();
     // Always get at least one if available
-    if (xQueueReceive(s_telem_q, &batch[n], pdMS_TO_TICKS(LOG_BATCH_MAX_MS)) == pdTRUE) {
-      n++;
-    }
-    // Drain remaining until either batch full or timeout reached
-    while (n < LOG_BATCH_MAX_RECORDS && (millis() - t0) < LOG_BATCH_MAX_MS) {
+    if (s_sd_batch) {
+      if (xQueueReceive(s_telem_q, &s_sd_batch[n], pdMS_TO_TICKS(LOG_BATCH_MAX_MS)) == pdTRUE) {
+        n++;
+      }
+    } else {
+      // Heap unavailable; write one-by-one
       TelemetryRecord rec;
-      if (xQueueReceive(s_telem_q, &rec, 0) == pdTRUE) {
-        batch[n++] = rec;
-      } else {
-        break;
+      if (xQueueReceive(s_telem_q, &rec, pdMS_TO_TICKS(LOG_BATCH_MAX_MS)) == pdTRUE) {
+        if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+        s_log_file.write(reinterpret_cast<uint8_t*>(&rec), sizeof(TelemetryRecord));
+        s_log_file.flush();
+        if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+        continue;
       }
     }
-    if (n > 0) {
-      if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
-      s_log_file.write(reinterpret_cast<uint8_t*>(batch), n * sizeof(TelemetryRecord));
-      s_log_file.flush();
-      if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+    // Drain remaining until either batch full or timeout reached
+    if (s_sd_batch) {
+      while (n < LOG_BATCH_MAX_RECORDS && (millis() - t0) < LOG_BATCH_MAX_MS) {
+        TelemetryRecord rec;
+        if (xQueueReceive(s_telem_q, &rec, 0) == pdTRUE) {
+          s_sd_batch[n++] = rec;
+        } else {
+          break;
+        }
+      }
+      if (n > 0) {
+        if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+        s_log_file.write(reinterpret_cast<uint8_t*>(s_sd_batch), n * sizeof(TelemetryRecord));
+        s_log_file.flush();
+        if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+      }
     }
   }
 }
@@ -191,6 +217,7 @@ extern "C" void telemetryStartTasks() {
   xTaskCreatePinnedToCore(task_telem_agg, "telem", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 #if LOG_BINARY_ON_SD
   if (!s_telem_q) s_telem_q = xQueueCreate(128, sizeof(TelemetryRecord));
-  xTaskCreatePinnedToCore(task_sd_writer, "sdlog", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, SD_TASK_CORE);
+  // Increase stack a bit to accommodate SD + VFS operations
+  xTaskCreatePinnedToCore(task_sd_writer, "sdlog", 6144, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 #endif
 }
