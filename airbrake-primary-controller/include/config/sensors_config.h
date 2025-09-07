@@ -6,6 +6,10 @@
 // - I2C clock config per device
 // - Default IMU ranges and LPF
 // - Sea level pressure default for altitude
+// Default sea level pressure for altitude calculations (hPa)
+#ifndef SEALEVELPRESSURE_HPA
+#define SEALEVELPRESSURE_HPA (1012.0)
+#endif
 
 // IMU2 (MPU6050) orientation mapping to rocket body frame
 // Define a 3x3 rotation matrix R such that: v_body = R * v_sensor
@@ -21,4 +25,3 @@
 #define IMU2_R21 0.0f
 #define IMU2_R22 1.0f
 #endif
-

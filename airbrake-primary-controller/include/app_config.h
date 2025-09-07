@@ -131,85 +131,8 @@
 #endif
 
 // SECTION - Serial Monitor Output -------------------------------------------
-// Choose which values to print in logger CSV output
-#ifndef MON_LOG_FROM_TELEM
-#define MON_LOG_FROM_TELEM 1  // Prefer telemetry snapshot when available
-#endif
-#ifndef SERIAL_PLOTTER_MODE
-#define SERIAL_PLOTTER_MODE 1         // 1 = VSCode Serial Plotter format, 0 = CSV
-#endif
-
-// Teleplot output mode (one telemetry per line: name[:timestamp]:value)
-#ifndef TELEPLOT_MODE
-#define TELEPLOT_MODE 1               // 1 = Teleplot format enabled by default
-#endif
-#ifndef TELEPLOT_INCLUDE_TS
-#define TELEPLOT_INCLUDE_TS 0         // 1 = include millis() timestamp in Teleplot lines
-#endif
-
-// High-level serial output toggles
-//  - SERIAL_DATA_ENABLE: high-rate data lines (plotting/current state)
-//  - SERIAL_DEBUG_ENABLE: human-readable status/debug messages
-#ifndef SERIAL_DATA_ENABLE
-#define SERIAL_DATA_ENABLE 0           // default OFF to reduce serial spam
-#endif
-#ifndef SERIAL_DEBUG_ENABLE
-#define SERIAL_DEBUG_ENABLE 1          // default ON for setup/status messages
-#endif
-// Map legacy DEBUG_ENABLED to SERIAL_DEBUG_ENABLE
-#undef DEBUG_ENABLED
-#define DEBUG_ENABLED (SERIAL_DEBUG_ENABLE)
-
-// Teleplot debug/log formatting
-#ifndef TELEPLOT_DEBUG_BLOCK
-#define TELEPLOT_DEBUG_BLOCK 1         // 1 = multi-line, human-readable flags/state block
-#endif
-
-// Temporary: output only a single plotted value per line
-// Set to 1 to enable single-value plot mode; 0 restores multi-value output
-#ifndef PLOT_SINGLE_ONLY
-#define PLOT_SINGLE_ONLY 0            // default to multi-value output in Teleplot mode
-#endif
-// Label and expression for the single plotted value (used when PLOT_SINGLE_ONLY=1)
-#ifndef PLOT_SINGLE_LABEL
-#define PLOT_SINGLE_LABEL "agl_fused_m"
-#endif
-#ifndef PLOT_SINGLE_EXPR
-// Expression evaluated in task_logger.cpp where 'f' (svc::FusedAlt) is in scope
-// Default guards on AGL readiness for fused altitude
-#define PLOT_SINGLE_EXPR (agl_ready ? f.agl_fused_m : NAN)
-#endif
-
-// Enable side-by-side accelerometer comparison output
-#ifndef PLOT_COMPARE_ACCEL
-#define PLOT_COMPARE_ACCEL 1          // 1 = emit imu1 vs imu2 accel pairs
-#endif
-
-// Plotter single-channel selection (only used when SERIAL_PLOTTER_MODE=1)
-#define PLOT_SRC_IMU1_AX  1
-#define PLOT_SRC_IMU1_AY  2
-#define PLOT_SRC_IMU1_AZ  3
-#define PLOT_SRC_IMU2_AX  4
-#define PLOT_SRC_IMU2_AY  5
-#define PLOT_SRC_IMU2_AZ  6
-#define PLOT_SRC_IMU2_GX  7
-#define PLOT_SRC_IMU2_GY  8
-#define PLOT_SRC_IMU2_GZ  9
-
-#ifndef PLOT_SOURCE
-#define PLOT_SOURCE PLOT_SRC_IMU1_AX  // default: IMU1 accel X (g)
-#endif
-#ifndef PLOT_VAR_LABEL
-#define PLOT_VAR_LABEL "imu1_ax_g"    // label used by Serial Plotter
-#endif
-
-// Axis mask for comparison mode (bit0=X, bit1=Y, bit2=Z)
-#ifndef PLOT_ACCEL_AXES_MASK
-#define PLOT_ACCEL_AXES_MASK 0x1      // default: X only; set 0x7 for XYZ
-#endif
-#ifndef PLOT_INCLUDE_DIFF
-#define PLOT_INCLUDE_DIFF 1           // include diff (imu1 - imu2) per axis
-#endif
+// Moved to dedicated monitor config for clarity
+#include "config/monitor_config.h"
 #ifndef MON_ENABLE_TIME_MS
 #define MON_ENABLE_TIME_MS 1
 #endif
@@ -248,10 +171,8 @@
 #endif
 // !SECTION
 
-// Sea level pressure for altitude calc
-#ifndef SEALEVELPRESSURE_HPA
-#define SEALEVELPRESSURE_HPA (1012.0)
-#endif
+// Sensor config (sea level pressure, IMU orientation, etc.)
+#include "config/sensors_config.h"
 
 // Default app core for tasks (ESP32-S3: 1 is App core)
 #ifndef APP_CPU_NUM

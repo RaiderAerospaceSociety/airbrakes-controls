@@ -82,8 +82,15 @@
 #define FC_SENSOR_RECOVERY_MS 1500
 #endif
 
+// Baro agreement gate thresholds (magnitude and dwell)
+#ifndef FC_BARO_AGREE_M
+#define FC_BARO_AGREE_M 15.0f
+#endif
+#ifndef FC_BARO_AGREE_MS
+#define FC_BARO_AGREE_MS 500
+#endif
+
 // Airbrake command (placeholder; servo mapping added later)
 #ifndef FC_DEPLOY_CMD_DEG
 #define FC_DEPLOY_CMD_DEG 30.0f
 #endif
-

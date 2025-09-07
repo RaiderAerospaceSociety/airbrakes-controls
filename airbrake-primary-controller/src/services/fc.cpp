@@ -92,10 +92,8 @@ static void fc_update_flags(const svc::FusedAlt &f, uint32_t dt_ms) {
   // Basic baro agreement (optional gate)
   if (vb && v1 && !isnan(b.altitude_m) && !isnan(u1.altitude_m)) {
     float diff = fabsf((float)b.altitude_m - u1.altitude_m);
-    const float agree_m = 15.0f; // TODO: expose via config
-    const uint32_t agree_ms = 500;
     static uint32_t agree_acc = 0;
-    if (diff <= agree_m) { agree_acc += dt_ms; if (agree_acc >= agree_ms) s_flags |= FCF_BARO_AGREE; }
+    if (diff <= FC_BARO_AGREE_M) { agree_acc += dt_ms; if (agree_acc >= FC_BARO_AGREE_MS) s_flags |= FCF_BARO_AGREE; }
     else { agree_acc = 0; s_flags &= ~FCF_BARO_AGREE; }
   }
 

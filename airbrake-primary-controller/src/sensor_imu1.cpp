@@ -11,6 +11,7 @@
 
 #include "pins.h"
 #include "app_config.h"
+#include "config/sensors_config.h"
 #include "logging.h"
 #include "bus.h"
 #include "sensor_imu1.h"
