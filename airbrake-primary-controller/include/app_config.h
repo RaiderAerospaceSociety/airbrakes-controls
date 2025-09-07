@@ -115,10 +115,13 @@
 #define LOG_BATCH_MAX_MS 100
 #endif
 #ifndef LOG_BINARY_ON_SD
-#define LOG_BINARY_ON_SD 0
+#define LOG_BINARY_ON_SD 1
 #endif
 #ifndef SD_PROBE_ON_BOOT
 #define SD_PROBE_ON_BOOT 1   // quick one-time SD wiring probe during setup()
+#endif
+#ifndef SD_PROBE_WRITE_TEST
+#define SD_PROBE_WRITE_TEST 0 // 1 = create/read a tiny test file during probe
 #endif
 #ifndef LOG_INCLUDE_CRC
 #define LOG_INCLUDE_CRC 0
@@ -143,6 +146,19 @@
 #ifndef TELEPLOT_INCLUDE_TS
 #define TELEPLOT_INCLUDE_TS 0         // 1 = include millis() timestamp in Teleplot lines
 #endif
+
+// High-level serial output toggles
+//  - SERIAL_DATA_ENABLE: high-rate data lines (plotting/current state)
+//  - SERIAL_DEBUG_ENABLE: human-readable status/debug messages
+#ifndef SERIAL_DATA_ENABLE
+#define SERIAL_DATA_ENABLE 0           // default OFF to reduce serial spam
+#endif
+#ifndef SERIAL_DEBUG_ENABLE
+#define SERIAL_DEBUG_ENABLE 1          // default ON for setup/status messages
+#endif
+// Map legacy DEBUG_ENABLED to SERIAL_DEBUG_ENABLE
+#undef DEBUG_ENABLED
+#define DEBUG_ENABLED (SERIAL_DEBUG_ENABLE)
 
 // Teleplot debug/log formatting
 #ifndef TELEPLOT_DEBUG_BLOCK
@@ -240,5 +256,9 @@
 // Default app core for tasks (ESP32-S3: 1 is App core)
 #ifndef APP_CPU_NUM
 #define APP_CPU_NUM 1
+#endif
+// Core to run the SD logging task on (0=PRO CPU, 1=APP CPU)
+#ifndef SD_TASK_CORE
+#define SD_TASK_CORE 0
 #endif
 // !SECTION

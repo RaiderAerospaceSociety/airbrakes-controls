@@ -29,6 +29,7 @@ static void task_logger(void *param) {
     bool agl_ready = f.agl_ready;
 
     // Teleplot vs Serial Plotter output
+#if SERIAL_DATA_ENABLE
 #if defined(TELEPLOT_MODE) && TELEPLOT_MODE
     // Teleplot: output one telemetry per line: name[:timestamp]:value
 #if TELEPLOT_INCLUDE_TS
@@ -43,6 +44,7 @@ static void task_logger(void *param) {
       Serial.println((val), (prec)); \
     } while (0)
 #endif
+// (keep TP_LINE scope open until after emission)
 
 #if defined(PLOT_SINGLE_ONLY) && PLOT_SINGLE_ONLY
     TP_LINE(PLOT_SINGLE_LABEL, (PLOT_SINGLE_EXPR), 3);
@@ -81,6 +83,7 @@ static void task_logger(void *param) {
 #if FUSION_USE_ACC_INT
     Serial.print(",vz_acc_mps:"); Serial.print(agl_ready ? f.vz_acc_mps : NAN, 3);
 #endif
+
     Serial.print(",vz_fused_mps:"); Serial.print(agl_ready ? f.vz_fused_mps : NAN, 3);
     Serial.print(",az_imu1_mps2:"); Serial.print(f.az_imu1_mps2, 3);
     Serial.print(",temp_C:"); Serial.print(f.temp_c, 3);
@@ -96,7 +99,10 @@ static void task_logger(void *param) {
     Serial.println();
 #endif
 
-    // Debug feed (non-plotter): human-friendly CSV or multi-line block of FC state and flags
+#endif // SERIAL_DATA_ENABLE
+
+    // Status/flags stream (considered DATA, not DEBUG): emits periodically
+#if SERIAL_DATA_ENABLE
     svc::FcStatus st; svc::fcGetStatus(st);
     auto state_name = [](uint8_t s)->const char*{
       switch (s) {
@@ -138,7 +144,7 @@ static void task_logger(void *param) {
     // Single-line CSV debug
 #if defined(TELEPLOT_MODE) && TELEPLOT_MODE
     Serial.print(">:");
-#endif
+#endif // SERIAL_DATA_ENABLE
     Serial.print("DBG,fc_state_str:"); Serial.print(state_name(st.state));
     Serial.print(",fc_state:"); Serial.print(st.state);
     Serial.print(",flags_hex:0x"); Serial.print(ff, HEX);
@@ -158,6 +164,8 @@ static void task_logger(void *param) {
     Serial.print(",BURNOUT_DET:"); Serial.print((ff & svc::FCF_BURNOUT_DET) ? 1 : 0);
     Serial.println();
 #endif
+
+#endif // SERIAL_DATA_ENABLE
 
     vTaskDelayUntil(&last, period);
   }

@@ -189,6 +189,6 @@ extern "C" void telemetryStartTasks() {
   xTaskCreatePinnedToCore(task_telem_agg, "telem", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
 #if LOG_BINARY_ON_SD
   if (!s_telem_q) s_telem_q = xQueueCreate(128, sizeof(TelemetryRecord));
-  xTaskCreatePinnedToCore(task_sd_writer, "sdlog", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, APP_CPU_NUM);
+  xTaskCreatePinnedToCore(task_sd_writer, "sdlog", 4096, nullptr, TASK_PRIO_LOGGER, nullptr, SD_TASK_CORE);
 #endif
 }

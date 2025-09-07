@@ -26,7 +26,7 @@
 #define PIN_MISO1 37 // Feather S3 MISO
 #endif
 #ifndef PIN_MOSI1
-#define PIN_MOSI1 35 // Feather S3 MOSI
+#define PIN_MOSI1 35  // Feather S3 MOSI
 #endif
 
 // SPI (cs)
@@ -34,7 +34,7 @@
 #define PIN_CS_BMP1 10 // Default CS for BMP1
 #endif
 #ifndef PIN_CS_SD1
-#define PIN_CS_SD1 11 // Default CS for SD1
+#define PIN_CS_SD1 7 // Default CS for SD1
 #endif
 
 // USFSMAX DRDY not used; polling is employed
