@@ -125,6 +125,34 @@
 #define SERIAL_PLOTTER_MODE 1         // 1 = VSCode Serial Plotter format, 0 = CSV
 #endif
 
+// Teleplot output mode (one telemetry per line: name[:timestamp]:value)
+#ifndef TELEPLOT_MODE
+#define TELEPLOT_MODE 1               // 1 = Teleplot format enabled by default
+#endif
+#ifndef TELEPLOT_INCLUDE_TS
+#define TELEPLOT_INCLUDE_TS 0         // 1 = include millis() timestamp in Teleplot lines
+#endif
+
+// Teleplot debug/log formatting
+#ifndef TELEPLOT_DEBUG_BLOCK
+#define TELEPLOT_DEBUG_BLOCK 1         // 1 = multi-line, human-readable flags/state block
+#endif
+
+// Temporary: output only a single plotted value per line
+// Set to 1 to enable single-value plot mode; 0 restores multi-value output
+#ifndef PLOT_SINGLE_ONLY
+#define PLOT_SINGLE_ONLY 0            // default to multi-value output in Teleplot mode
+#endif
+// Label and expression for the single plotted value (used when PLOT_SINGLE_ONLY=1)
+#ifndef PLOT_SINGLE_LABEL
+#define PLOT_SINGLE_LABEL "agl_fused_m"
+#endif
+#ifndef PLOT_SINGLE_EXPR
+// Expression evaluated in task_logger.cpp where 'f' (svc::FusedAlt) is in scope
+// Default guards on AGL readiness for fused altitude
+#define PLOT_SINGLE_EXPR (agl_ready ? f.agl_fused_m : NAN)
+#endif
+
 // Enable side-by-side accelerometer comparison output
 #ifndef PLOT_COMPARE_ACCEL
 #define PLOT_COMPARE_ACCEL 1          // 1 = emit imu1 vs imu2 accel pairs

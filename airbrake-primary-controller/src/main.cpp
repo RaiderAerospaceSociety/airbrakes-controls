@@ -46,8 +46,8 @@ void setup() {
   ums3.setPixelPower(true);
   delay(50);
 
-  // Boot-up pixel sequence then steady green while running
-  ums3.setPixelColor(LED_RUN_COLOR);
+  // Set initial LED to red; task_led will update as subsystems come online
+  ums3.setPixelColor(0xFF0000);
 
   // Start tasks
   telemetryStartTasks();
@@ -56,6 +56,7 @@ void setup() {
   imu2StartTask();
   svc::fusionStartTask();
   svc::fcStartTask();
+  ledStartTask();
   loggerStartTask();
 }
 //
