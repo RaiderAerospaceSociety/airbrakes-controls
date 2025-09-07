@@ -15,6 +15,8 @@
 #include "sensor_imu2.h"
 #include "logging.h"
 #include "services/fc.h"
+// Buses (SPI/I2C mutexes and pin map)
+#include "bus.h"
 // !SECTION
 
 #if LOG_BINARY_ON_SD
