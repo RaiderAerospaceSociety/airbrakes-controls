@@ -43,7 +43,11 @@
 #endif
 // Default LED mode (see include/task_led.h)
 #ifndef LED_MODE_DEFAULT
-#define LED_MODE_DEFAULT 1  // 0=STATUS, 1=SENSORS, 2=TILT
+#define LED_MODE_DEFAULT 0  // 0=STATUS, 1=SENSORS, 2=TILT
+#endif
+// Enable using the FeatherS3 blue LED for heartbeat/debug patterns
+#ifndef LED_BLUE_HEARTBEAT
+#define LED_BLUE_HEARTBEAT 1
 #endif
 // Zero AGL baseline after this many ms from boot
 #ifndef ZERO_AGL_AFTER_MS
@@ -112,6 +116,9 @@
 #endif
 #ifndef LOG_BINARY_ON_SD
 #define LOG_BINARY_ON_SD 0
+#endif
+#ifndef SD_PROBE_ON_BOOT
+#define SD_PROBE_ON_BOOT 1   // quick one-time SD wiring probe during setup()
 #endif
 #ifndef LOG_INCLUDE_CRC
 #define LOG_INCLUDE_CRC 0

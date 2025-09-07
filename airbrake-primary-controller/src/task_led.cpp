@@ -109,6 +109,29 @@ static void task_led(void *param) {
     }
 
     ums3.setPixelColor(color);
+
+#if LED_BLUE_HEARTBEAT
+    // Blue LED heartbeat patterns for ground debugging
+    bool blue_on = false;
+    if (fault) {
+      // Fast blink at ~4 Hz: 100ms on per 250ms cycle
+      uint32_t t = now % 250;
+      blue_on = (t < 100);
+    } else if (!sensors_ok) {
+      // Slow single blip every 2s to show liveness
+      uint32_t t = now % 2000;
+      blue_on = (t < 80);
+    } else if (sensors_ok && !agl_ready) {
+      // Medium 1 Hz blip while waiting for fused readiness
+      uint32_t t = now % 1000;
+      blue_on = (t < 100);
+    } else {
+      // Ready: double‑blip every 2s
+      uint32_t t = now % 2000;
+      blue_on = (t < 60) || (t >= 300 && t < 360);
+    }
+    ums3.setBlueLED(blue_on);
+#endif
     vTaskDelay(pdMS_TO_TICKS(LED_PERIOD_MS));
   }
 }

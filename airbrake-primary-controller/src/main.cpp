@@ -20,6 +20,10 @@
 #include "telemetry.h"
 #include "services/fusion.h"
 #include "services/fc.h"
+#if SD_PROBE_ON_BOOT
+#include <SPI.h>
+#include <SD.h>
+#endif
 //
 
 // Note: telemetryStartTasks() declared in telemetry.h
@@ -48,6 +52,24 @@ void setup() {
 
   // Set initial LED to red; task_led will update as subsystems come online
   ums3.setPixelColor(0xFF0000);
+
+#if SD_PROBE_ON_BOOT
+  // Quick SD wiring probe (SPI mode) using PIN_CS_SD1
+  {
+    LOGLN("SD: probing...");
+    if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+    bool sd_ok = SD.begin(PIN_CS_SD1);
+    if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+    if (sd_ok) {
+      // Attempt a simple filesystem op
+      File root = SD.open("/");
+      if (root) { LOGLN("SD: mount OK (root opened)"); root.close(); }
+      else { LOGLN("SD: mount OK but root open failed"); }
+    } else {
+      LOGLN("SD: probe failed (check wiring/CS)");
+    }
+  }
+#endif
 
   // Start tasks
   telemetryStartTasks();

@@ -132,14 +132,18 @@ static void task_telem_agg(void *param) {
 
 #if LOG_BINARY_ON_SD
 static void task_sd_writer(void *param) {
-  // Parameterize SD CS if needed via pins.h; default to SS
-  const uint8_t cs = SS;
-  if (!SD.begin(cs)) {
+  const uint8_t cs = PIN_CS_SD1; // from pins.h
+  if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
+  bool ok = SD.begin(cs);
+  if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
+  if (!ok) {
     LOGLN("SD init failed; disabling SD logging");
     vTaskDelete(NULL);
     return;
   }
+  if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
   s_log_file = SD.open("log.bin", FILE_WRITE);
+  if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
   if (!s_log_file) {
     LOGLN("SD open failed: log.bin");
     vTaskDelete(NULL);
@@ -163,8 +167,10 @@ static void task_sd_writer(void *param) {
       }
     }
     if (n > 0) {
+      if (g_spi_mutex) xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
       s_log_file.write(reinterpret_cast<uint8_t*>(batch), n * sizeof(TelemetryRecord));
       s_log_file.flush();
+      if (g_spi_mutex) xSemaphoreGive(g_spi_mutex);
     }
   }
 }
