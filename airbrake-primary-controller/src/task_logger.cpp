@@ -23,6 +23,13 @@ static void task_logger(void *param) {
   const TickType_t period = pdMS_TO_TICKS(LOGGER_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;) {
+    // Minimal custom visualization mode: output only "tilt_deg:<angle>"
+#if SERIAL_DATA_ENABLE && (defined(VIS_TILT_ONLY_MODE) && VIS_TILT_ONLY_MODE)
+    svc::FusedAlt f_min; svc::fusionGetAlt(f_min);
+    Serial.print("tilt_deg:"); Serial.println(f_min.tilt_deg, 2);
+    vTaskDelayUntil(&last, period);
+    continue;
+#endif
     // VS Code Serial Plotter format: ">label:value,label:value"
     TelemetryRecord rec; telemetryGetLatest(rec);
     svc::FusedAlt f; svc::fusionGetAlt(f);
@@ -34,7 +41,7 @@ static void task_logger(void *param) {
     // Teleplot: output one telemetry per line: name[:timestamp]:value
 #if TELEPLOT_INCLUDE_TS
     #define TP_LINE(name, val, prec) do { \
-      Serial.print(name); Serial.print(":"); \
+      Serial.print(">");Serial.print(name); Serial.print(":"); \
       Serial.print((uint32_t)millis()); Serial.print(":"); \
       Serial.println((val), (prec)); \
     } while (0)
@@ -102,7 +109,7 @@ static void task_logger(void *param) {
 #endif // SERIAL_DATA_ENABLE
 
     // Status/flags stream (considered DATA, not DEBUG): emits periodically
-#if SERIAL_DATA_ENABLE
+#if SERIAL_DATA_ENABLE && !(defined(VIS_TILT_ONLY_MODE) && VIS_TILT_ONLY_MODE)
     svc::FcStatus st; svc::fcGetStatus(st);
     auto state_name = [](uint8_t s)->const char*{
       switch (s) {

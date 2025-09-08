@@ -11,6 +11,13 @@ Current modes
   - Configure in `include/app_config.h` via `SERIAL_PLOTTER_MODE` and PLOT_* macros.
 - CSV mode (optional): comma-separated values with header rows (currently behind compile-time toggles).
 
+Tilt visualizer (tools)
+- A minimal Python tool exists at `tools/tilt_visualizer.py` to plot `tilt_deg:<value>` over serial.
+- It includes a collapsible Raw Serial Monitor to inspect all incoming lines:
+  - Launch with `--show-raw` to start expanded; press `r` to toggle while running.
+  - Options: `--raw-buffer N` to control retained lines, `--print-raw` to also tee to stdout.
+  - Example: `python tools/tilt_visualizer.py --port /dev/tty.usbmodem1101 --show-raw`.
+
 Planned improvements
 - Channel registry with presets and tags, so a single config selects a group of channels (e.g., `imu_compare`, `altitude_all`, `fused_debug`).
 - Logger reads from the telemetry snapshot by default, so all consumers see a consistent view.

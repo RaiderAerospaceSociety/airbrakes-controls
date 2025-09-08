@@ -94,3 +94,8 @@
 #ifndef FC_DEPLOY_CMD_DEG
 #define FC_DEPLOY_CMD_DEG 30.0f
 #endif
+
+// Optional: override values for bench testing (compile with -D DESK_MODE=1)
+#if defined(DESK_MODE) && DESK_MODE
+#include "config/desk_mode.h"
+#endif

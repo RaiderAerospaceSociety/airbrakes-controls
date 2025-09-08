@@ -183,3 +183,8 @@
 #define SD_TASK_CORE 0
 #endif
 // !SECTION
+
+// Optional: override values for bench testing (compile with -D DESK_MODE=1)
+#if defined(DESK_MODE) && DESK_MODE
+#include "config/desk_mode.h"
+#endif

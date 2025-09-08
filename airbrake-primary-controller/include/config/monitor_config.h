@@ -39,6 +39,9 @@
 #endif
 
 // Single-value plot helper (used for A/B testing plot plugins)
+#ifndef VIS_TILT_ONLY_MODE
+#define VIS_TILT_ONLY_MODE 0     // 1 = emit only "tilt_deg:<angle>" lines
+#endif
 #ifndef PLOT_SINGLE_ONLY
 #define PLOT_SINGLE_ONLY 0
 #endif

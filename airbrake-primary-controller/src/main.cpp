@@ -51,6 +51,10 @@ void setup() {
   ums3.setPixelPower(true);
   delay(50);
 
+#if defined(DESK_MODE) && DESK_MODE
+  DEBUGLN("Desk Mode: ON (scaled thresholds, reduced durations)");
+#endif
+
   // Set initial LED to red; task_led will update as subsystems come online
   ums3.setPixelColor(0xFF0000);
 
