@@ -21,7 +21,7 @@
 
 // Tilt limits
 #ifndef FC_TILT_ABORT_DEG
-#define FC_TILT_ABORT_DEG 20.0f
+#define FC_TILT_ABORT_DEG 30.0f
 #endif
 #ifndef FC_TILT_ABORT_DWELL_MS
 #define FC_TILT_ABORT_DWELL_MS 200
