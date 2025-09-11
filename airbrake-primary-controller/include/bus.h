@@ -14,12 +14,19 @@
 extern SemaphoreHandle_t g_spi_mutex;
 /** @brief Global I2C bus mutex (protects Wire transactions). */
 extern SemaphoreHandle_t g_i2c_mutex;
+/** @brief Global setup mutex (protects device setup). */
+extern SemaphoreHandle_t g_setup_mutex;
 
 /** @brief Initialize I2C and SPI buses and create mutexes (idempotent). */
-inline void bus_setup() {
+inline void bus_setup()
+{
   // Create mutexes
-  if (!g_spi_mutex) g_spi_mutex = xSemaphoreCreateMutex();
-  if (!g_i2c_mutex) g_i2c_mutex = xSemaphoreCreateMutex();
+  if (!g_spi_mutex)
+    g_spi_mutex = xSemaphoreCreateMutex();
+  if (!g_i2c_mutex)
+    g_i2c_mutex = xSemaphoreCreateMutex();
+  if (!g_setup_mutex)
+    g_setup_mutex = xSemaphoreCreateMutex();
 
   // I2C once for all devices
   Wire.begin(PIN_SDA1, PIN_SCL1);
