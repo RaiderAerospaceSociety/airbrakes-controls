@@ -43,7 +43,7 @@ static void task_sensor_imu1(void *param)
   // Enter protected setup for IMU1
   ENTER_CRITICAL(g_setup_mutex);
 
-  // Ensure data mutex
+  // Ensure data mutex exists
   if (!s_imu1Data_mutex)
     s_imu1Data_mutex = xSemaphoreCreateMutex();
 
@@ -137,7 +137,7 @@ static void task_sensor_imu1(void *param)
       s_imu1.getEULER();
     }
 
-    //* -- Snapshot Build --
+    //* ===== Snapshot Build =====
     imu1_reading_t r;
     r.quat[0] = qt[0][0];
     r.quat[1] = qt[0][1];

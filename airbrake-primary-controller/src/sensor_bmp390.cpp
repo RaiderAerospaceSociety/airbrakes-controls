@@ -25,7 +25,7 @@ static bool s_bmp1_ok = false;
 // Data handlers
 static SemaphoreHandle_t s_bmp1Data_mutex = nullptr; // protect local snapshot `s_latest`
 static bmp_reading_t s_latest = {0};
-//* ===================
+//* ==========================
 
 //* ===== Task: BMP1 (BMP390) =====
 static void task_sensor_bmp1(void *param)
@@ -46,7 +46,7 @@ static void task_sensor_bmp1(void *param)
   // Check for BMP1 presence and kill task if not found
   if (!s_bmp1_ok)
   {
-    LOGLN("BMP390 #1 not found (check wiring)");
+    LOGLN("BMP1 (BMP390) not found; task exiting");
     vTaskDelete(nullptr);
     return;
   }

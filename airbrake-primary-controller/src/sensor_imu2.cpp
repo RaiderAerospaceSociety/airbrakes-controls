@@ -37,40 +37,34 @@ static void imu2_task(void *param)
   if (!s_imu2Data_mutex)
     s_imu2Data_mutex = xSemaphoreCreateMutex();
 
-  bool ok = false;
-  if (g_i2c_mutex)
-    xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-  ok = s_imu2.begin(0x68, &Wire);
-  if (g_i2c_mutex)
-    xSemaphoreGive(g_i2c_mutex);
-  if (!ok)
+  // Initialize MPU6050 on shared I2C
+  bool s_imu2_ok = false;
+  WITH_MUTEX(g_i2c_mutex)
   {
-    LOGLN("IMU2 (MPU6050) not found at 0x68");
-    // Try alternate address 0x69
-    if (g_i2c_mutex)
-      xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-    ok = s_imu2.begin(0x69, &Wire);
-    if (g_i2c_mutex)
-      xSemaphoreGive(g_i2c_mutex);
+    s_imu2_ok = s_imu2.begin(0x68, &Wire);
   }
-  if (!ok)
+
+  // Check for IMU2 presence and kill task if not found
+  if (!s_imu2_ok)
   {
-    LOGLN("IMU2 (MPU6050) init failed; task exiting");
-    vTaskDelete(NULL);
+    LOGLN("IMU2 (MPU6050) not found; task exiting");
+    vTaskDelete(nullptr);
     return;
   }
 
-  // Configure ranges and filter
+  // Configure IMU2 ranges and filter
+  ENTER_CRITICAL(g_i2c_mutex);
   s_imu2.setAccelerometerRange(MPU6050_RANGE_8_G);
   s_imu2.setGyroRange(MPU6050_RANGE_500_DEG);
   s_imu2.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  EXIT_CRITICAL(g_i2c_mutex);
+
   LOGLN("IMU2 (MPU6050) initialized");
-  EXIT_CRITICAL(g_setup_mutex);
   DEBUGLN("===== ^ IMU2 (MPU6050) setup complete ^ =====\n");
+  EXIT_CRITICAL(g_setup_mutex);
 
   const TickType_t period = pdMS_TO_TICKS(IMU2_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
-
   for (;;)
   {
     sensors_event_t a, g, temp;
