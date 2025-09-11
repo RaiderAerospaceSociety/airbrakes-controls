@@ -38,6 +38,9 @@ static imu1_reading_t s_latest = {0};
 //* ===== Task: IMU1 (USFSMAX) =====
 static void task_sensor_imu1(void *param)
 {
+  // Enter protected setup for IMU1
+  ENTER_CRITICAL(g_setup_mutex);
+  DEBUGLN("===== IMU1 (USFSMAX) setup... =====");
   if (!s_imu1Data_mutex)
     s_imu1Data_mutex = xSemaphoreCreateMutex();
 
@@ -78,6 +81,8 @@ static void task_sensor_imu1(void *param)
   }
 
   LOGLN("IMU1 (USFSMAX) initialized (library)");
+  DEBUGLN("===== IMU1 (USFSMAX) setup complete =====");
+  EXIT_CRITICAL(g_setup_mutex);
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
