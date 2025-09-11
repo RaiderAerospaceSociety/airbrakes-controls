@@ -28,12 +28,13 @@ static bmp_reading_t s_latest = {0};
 //* ===== Task: BMP1 =====
 static void task_sensor_bmp1(void *param)
 {
-  // Initialize device on shared SPI
+  // Initialize BMP1 on shared SPI
   WITH_MUTEX(g_spi_mutex)
   {
     s_bmp1_ok = s_bmp1.begin_SPI(PIN_CS_BMP1, &SPI);
   }
 
+  // Check for BMP1 presence and kill task if not found
   if (!s_bmp1_ok)
   {
     LOGLN("BMP390 #1 not found (check wiring)");
@@ -41,14 +42,7 @@ static void task_sensor_bmp1(void *param)
     return;
   }
 
-  // WITH_MUTEX(g_spi_mutex)
-  // {
-  //   s_bmp1.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
-  //   s_bmp1.setPressureOversampling(BMP3_OVERSAMPLING_4X);
-  //   s_bmp1.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
-  //   s_bmp1.setOutputDataRate(BMP3_ODR_50_HZ);
-  //   uint8_t id = s_bmp1.chipID();
-  // }
+  // Configure BMP1 (per datasheet recommendations)
   ENTER_CRITICAL(g_spi_mutex);
   s_bmp1.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
   s_bmp1.setPressureOversampling(BMP3_OVERSAMPLING_4X);
@@ -63,12 +57,13 @@ static void task_sensor_bmp1(void *param)
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
+    // Perform reading and snapshot data if valid
     bool ok;
-    if (g_spi_mutex)
-      xSemaphoreTake(g_spi_mutex, portMAX_DELAY);
-    ok = s_bmp1.performReading();
-    if (g_spi_mutex)
-      xSemaphoreGive(g_spi_mutex);
+    WITH_MUTEX(g_spi_mutex)
+    {
+      ok = s_bmp1.performReading();
+    }
+
     if (ok)
     {
       bmp_reading_t r;
