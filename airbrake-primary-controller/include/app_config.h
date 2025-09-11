@@ -10,37 +10,8 @@
 #define DEBUG_ENABLED 1
 #endif
 
-// Task stack sizes and priorities
-#ifndef TASK_STACK_BMP390
-#define TASK_STACK_BMP390 4096
-#endif
-#ifndef TASK_STACK_LOGGER
-#define TASK_STACK_LOGGER 3072
-#endif
-#ifndef TASK_STACK_LED
-#define TASK_STACK_LED 2048
-#endif
-
-#ifndef TASK_PRIO_BMP390
-#define TASK_PRIO_BMP390 3
-#endif
-#ifndef TASK_PRIO_LOGGER
-#define TASK_PRIO_LOGGER 1
-#endif
-#ifndef TASK_PRIO_LED
-#define TASK_PRIO_LED 1
-#endif
-
-// Periods
-#ifndef BMP390_PERIOD_MS
-#define BMP390_PERIOD_MS 100
-#endif
-#ifndef LOGGER_PERIOD_MS
-#define LOGGER_PERIOD_MS 5000
-#endif
-#ifndef LED_PERIOD_MS
-#define LED_PERIOD_MS 15
-#endif
+// Task configuration is centralized here
+#include "config/tasks_config.h"
 // Default LED mode (see include/task_led.h)
 #ifndef LED_MODE_DEFAULT
 #define LED_MODE_DEFAULT 0 // 0=STATUS, 1=SENSORS, 2=TILT
@@ -96,17 +67,6 @@
 #endif
 
 // Telemetry & SD logging
-#ifndef USFS_PERIOD_MS
-#define USFS_PERIOD_MS 20
-#endif
-// IMU2 (MPU6050) poll period
-#ifndef IMU2_PERIOD_MS
-#define IMU2_PERIOD_MS 20
-#endif
-// DRDY is not used; USFS is polled at USFS_PERIOD_MS
-#ifndef TELEM_PERIOD_MS
-#define TELEM_PERIOD_MS 20
-#endif
 
 #ifndef LOG_BATCH_MAX_RECORDS
 #define LOG_BATCH_MAX_RECORDS 50
@@ -131,32 +91,8 @@
 #endif
 
 // SECTION - Serial Monitor Output -------------------------------------------
-// Moved to dedicated monitor config for clarity
+// Centralized in monitor_config.h
 #include "config/monitor_config.h"
-#ifndef MON_ENABLE_TIME_MS
-#define MON_ENABLE_TIME_MS 1
-#endif
-#ifndef MON_ENABLE_BMP1
-#define MON_ENABLE_BMP1 0
-#endif
-#ifndef MON_ENABLE_IMU1_YPR
-#define MON_ENABLE_IMU1_YPR 0
-#endif
-#ifndef MON_ENABLE_IMU1_ACCEL
-#define MON_ENABLE_IMU1_ACCEL 1
-#endif
-#ifndef MON_ENABLE_IMU2_ACCEL
-#define MON_ENABLE_IMU2_ACCEL 1
-#endif
-#ifndef MON_ENABLE_IMU2_GYRO
-#define MON_ENABLE_IMU2_GYRO 1
-#endif
-#ifndef MON_ENABLE_IMU2_TEMP
-#define MON_ENABLE_IMU2_TEMP 0
-#endif
-#ifndef MON_PRINT_HEADER_EVERY
-#define MON_PRINT_HEADER_EVERY 50
-#endif
 
 // SECTION - LED/Pixel Config -------------------------------------------------
 // Visual boot animation and steady run color
@@ -173,15 +109,6 @@
 
 // Sensor config (sea level pressure, IMU orientation, etc.)
 #include "config/sensors_config.h"
-
-// Default app core for tasks (ESP32-S3: 1 is App core)
-#ifndef APP_CPU_NUM
-#define APP_CPU_NUM 1
-#endif
-// Core to run the SD logging task on (0=PRO CPU, 1=APP CPU)
-#ifndef SD_TASK_CORE
-#define SD_TASK_CORE 0
-#endif
 // !SECTION
 
 // Optional: override values for bench testing (compile with -D DESK_MODE=1)
