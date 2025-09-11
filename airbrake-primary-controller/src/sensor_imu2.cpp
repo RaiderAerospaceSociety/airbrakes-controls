@@ -67,11 +67,10 @@ static void imu2_task(void *param)
   for (;;)
   {
     sensors_event_t a, g, temp;
-    if (g_i2c_mutex)
-      xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-    s_imu2.getEvent(&a, &g, &temp);
-    if (g_i2c_mutex)
-      xSemaphoreGive(g_i2c_mutex);
+    WITH_MUTEX(g_i2c_mutex)
+    {
+      s_imu2.getEvent(&a, &g, &temp);
+    }
 
     imu2_reading_t r;
     // Convert m/s^2 to g, rad/s to deg/s
@@ -98,20 +97,16 @@ static void imu2_task(void *param)
     r.temp_c = temp.temperature;
     r.valid = true;
 
-    if (s_imu2Data_mutex)
-    {
-      xSemaphoreTake(s_imu2Data_mutex, portMAX_DELAY);
-      s_latest = r;
-      xSemaphoreGive(s_imu2Data_mutex);
-    }
-    else
+    WITH_MUTEX(s_imu2Data_mutex)
     {
       s_latest = r;
     }
     vTaskDelayUntil(&last, pdMS_TO_TICKS(IMU2_PERIOD_MS));
   }
 }
+//* ==========================
 
+//* ===== Public API =====
 void imu2StartTask()
 {
   xTaskCreatePinnedToCore(imu2_task, "imu2", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
@@ -128,3 +123,4 @@ bool imu2Get(imu2_reading_t &out)
     xSemaphoreGive(s_imu2Data_mutex);
   return v;
 }
+//* ======================

@@ -1,75 +1,29 @@
-// Monitoring configuration (serial output modes, channel presets)
+// Monitoring configuration (Serial output)
 #pragma once
 
-// Prefer telemetry snapshot when available
-#ifndef MON_LOG_FROM_TELEM
-#define MON_LOG_FROM_TELEM 1
-#endif
-
-// Serial plotter vs CSV (legacy)
-#ifndef SERIAL_PLOTTER_MODE
-#define SERIAL_PLOTTER_MODE 1 // 1 = VSCode Serial Plotter format, 0 = CSV
-#endif
-
-// Teleplot output
-#ifndef TELEPLOT_MODE
-#define TELEPLOT_MODE 0 // default OFF; use unified key:value line format
-#endif
-#ifndef TELEPLOT_INCLUDE_TS
-#define TELEPLOT_INCLUDE_TS 0 // 1 = include millis() timestamp in Teleplot lines
-#endif
-
-// High-level serial output toggles
-//  - SERIAL_DATA_ENABLE: high-rate data lines (plotting/current state)
-//  - SERIAL_DEBUG_ENABLE: human-readable status/debug messages
+// Enable/disable monitoring output task
 #ifndef SERIAL_DATA_ENABLE
-#define SERIAL_DATA_ENABLE 1 // default OFF to reduce serial spam
-#endif
-#ifndef SERIAL_DEBUG_ENABLE
-#define SERIAL_DEBUG_ENABLE 1 // default ON for setup/status messages
+#define SERIAL_DATA_ENABLE 1
 #endif
 
-// Map legacy DEBUG_ENABLED to SERIAL_DEBUG_ENABLE so DEBUG* macros follow
+// Debug prints control (maps DEBUG* macros)
+#ifndef SERIAL_DEBUG_ENABLE
+#define SERIAL_DEBUG_ENABLE 1
+#endif
 #undef DEBUG_ENABLED
 #define DEBUG_ENABLED (SERIAL_DEBUG_ENABLE)
 
-// Teleplot debug/log formatting for state/flags block
-#ifndef TELEPLOT_DEBUG_BLOCK
-#define TELEPLOT_DEBUG_BLOCK 1
+// Monitoring mode: 0=Visualizer (key:value), 1=Human (fixed width)
+#ifndef MON_MODE
+#define MON_MODE 0
 #endif
 
-// Single-value plot helper (used for A/B testing plot plugins)
-#ifndef VIS_TILT_ONLY_MODE
-#define VIS_TILT_ONLY_MODE 0 // 1 = emit only "tilt_deg:<angle>" lines
-#endif
-#ifndef PLOT_SINGLE_ONLY
-#define PLOT_SINGLE_ONLY 0
-#endif
-#ifndef PLOT_SINGLE_LABEL
-#define PLOT_SINGLE_LABEL "agl_fused_m"
-#endif
-#ifndef PLOT_SINGLE_EXPR
-#define PLOT_SINGLE_EXPR (agl_ready ? f.agl_fused_m : NAN)
+// Include timestamp in monitoring lines
+#ifndef MON_INCLUDE_TS
+#define MON_INCLUDE_TS 1
 #endif
 
-// Comparison helpers (kept for future use)
-#ifndef PLOT_COMPARE_ACCEL
-#define PLOT_COMPARE_ACCEL 1
-#endif
-#ifndef PLOT_ACCEL_AXES_MASK
-#define PLOT_ACCEL_AXES_MASK 0x1
-#endif
-#ifndef PLOT_INCLUDE_DIFF
-#define PLOT_INCLUDE_DIFF 1
-#endif
-
-// Unified monitor output profile and options
-#ifndef MON_UNIFIED_OUTPUT
-#define MON_UNIFIED_OUTPUT 1 // 1 = use unified one-line key:value output
-#endif
-#ifndef MON_PROFILE_FULL
-#define MON_PROFILE_FULL 0 // 1 = emit extended set of metrics
-#endif
-#ifndef MON_DEBUG_BLOCK
-#define MON_DEBUG_BLOCK 0 // 1 = emit additional human-readable debug after data line
+// Show fusion sub-values (components used by fused outputs)
+#ifndef MON_SHOW_FUSION_PARTS
+#define MON_SHOW_FUSION_PARTS 0
 #endif

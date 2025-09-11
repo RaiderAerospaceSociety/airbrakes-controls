@@ -11,9 +11,9 @@
 #undef FUSION_VZ_MAX_DT_MS
 #define FUSION_VZ_MAX_DT_MS 100
 
-// Optional: include a timestamp in Teleplot lines to help debug
-#undef TELEPLOT_INCLUDE_TS
-#define TELEPLOT_INCLUDE_TS 1
+// Optional: include timestamp in monitor lines
+#undef MON_INCLUDE_TS
+#define MON_INCLUDE_TS 1
 
 // --- Flight controller thresholds (smaller/easier on bench) ---
 // Tilt: make abort unlikely on the bench

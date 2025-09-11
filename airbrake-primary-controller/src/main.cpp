@@ -15,7 +15,7 @@
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "task_led.h"
-#include "task_logger.h"
+#include "task_monitor.h"
 #include "telemetry.h"
 #include "services/fusion.h"
 #include "services/fc.h"
@@ -74,7 +74,7 @@ void setup()
   svc::fusionStartTask();
   svc::fcStartTask();
   ledStartTask();
-  loggerStartTask();
+  monitorStartTask();
 }
 //* =================
 

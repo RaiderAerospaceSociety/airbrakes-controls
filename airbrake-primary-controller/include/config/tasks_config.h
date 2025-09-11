@@ -28,7 +28,7 @@
 #define BMP390_PERIOD_MS 100
 #endif
 #ifndef LOGGER_PERIOD_MS
-#define LOGGER_PERIOD_MS 5000
+#define LOGGER_PERIOD_MS 50
 #endif
 #ifndef LED_PERIOD_MS
 #define LED_PERIOD_MS 15
