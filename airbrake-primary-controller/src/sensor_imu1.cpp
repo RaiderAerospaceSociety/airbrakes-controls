@@ -89,16 +89,19 @@ static void task_sensor_imu1(void *param)
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
-  //* -- Main Task Loop --
+
+  //* ===== Main Task Loop =====
   static float last_pressure_pa = NAN;
   static float last_altitude_m = NAN;
   for (;;)
   {
-    // Follow example: read event status to optimize what to fetch
+    // Read event status `evt` to determine which sensors have new data
     uint8_t evt = 0;
     s_i2c.readBytes(MAX32660_SLV_ADDR, COMBO_DRDY_STAT, 1, &evt);
 
-    // Bits: 0x01 Gyro, 0x02 Acc, 0x04 Mag, 0x08 Baro, 0x10 Quat
+    // Uses status bits to call appropriate combo read functions
+    // Bits: 0=ACC, 1=GYRO, 2=MAG, 3=BARO, 4=QUAT/EULER
+    //? Note: ACC is always read as part of GYRO or MAG reads, so only request it alone if no other sensor is indicated
     uint8_t call_sensors = evt & 0x0F;
     switch (call_sensors)
     {
@@ -127,11 +130,10 @@ static void task_sensor_imu1(void *param)
       break;
     }
 
+    // Check for new Quaternion/Euler data
     if (evt & 0x10)
     {
-      // New quaternion available
       s_imu1.getQUAT();
-      // Also fetch Euler for visibility/debug
       s_imu1.getEULER();
     }
 
@@ -160,9 +162,11 @@ static void task_sensor_imu1(void *param)
     }
     vTaskDelayUntil(&last, period);
   }
+  //* ==========================
 }
-//
+//* ================================
 
+//* ===== Public API =====
 void imu1StartTask()
 {
   xTaskCreatePinnedToCore(task_sensor_imu1, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);

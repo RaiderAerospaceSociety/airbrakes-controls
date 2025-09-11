@@ -115,17 +115,10 @@ void bmp390StartTask()
 bool bmp390Get(bmp_reading_t &out)
 {
   bool valid;
-  if (s_bmp1Data_mutex)
+  WITH_MUTEX(s_bmp1Data_mutex)
   {
-    xSemaphoreTake(s_bmp1Data_mutex, portMAX_DELAY);
-  }
-
-  out = s_latest;
-  valid = s_latest.valid;
-
-  if (s_bmp1Data_mutex)
-  {
-    xSemaphoreGive(s_bmp1Data_mutex);
+    out = s_latest;
+    valid = s_latest.valid;
   }
   return valid;
 }
