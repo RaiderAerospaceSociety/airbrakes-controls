@@ -98,7 +98,7 @@ static void task_sensor_bmp1(void *param)
 
 //* ===== Public API =====
 // Initializes all BMP1 specific resources then begins the task with the given configuration
-void bmp390StartTask()
+void bmp1StartTask()
 {
   // Mutex for protecting s_latest
   if (!s_bmp1Data_mutex)

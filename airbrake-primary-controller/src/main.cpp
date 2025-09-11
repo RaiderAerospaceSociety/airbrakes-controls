@@ -68,7 +68,7 @@ void setup()
 
   // Start tasks
   telemetryStartTasks();
-  bmp390StartTask();
+  bmp1StartTask();
   imu1StartTask();
   imu2StartTask();
   svc::fusionStartTask();
