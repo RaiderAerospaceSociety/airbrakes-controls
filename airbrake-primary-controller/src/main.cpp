@@ -42,19 +42,19 @@ void setup()
   ums3.setPixelBrightness(255 / 3);
   ums3.setPixelPower(true);
   delay(50);
-  DEBUGLN("===== Board Initialized =====");
+  DEBUGLN("===== ^ Board Initialized ^ =====\n");
 
   // Init logging (mutex) and shared buses
   logging_setup_mutex();
   bus_setup();
   delay(200);
   bus_scan_i2c();
-  DEBUGLN("===== Buses Initialized =====");
+  DEBUGLN("===== ^ Buses Initialized ^ =====\n");
 
   // Probe SD card (if enabled app_config.h)
 #if SD_PROBE_ON_BOOT
   bus_probe_sd();
-  DEBUGLN("===== SD Probe Complete =====");
+  DEBUGLN("===== ^ SD Probe Complete ^ =====\n");
 #endif
 
   // Desk Mode Alert (if enabled app_config.h)
@@ -64,7 +64,7 @@ void setup()
 
   // Set initial LED to red; task_led will update as subsystems come online
   ums3.setPixelColor(0xFF0000);
-  DEBUGLN("===== Setup Complete =====");
+  DEBUGLN("===== ^ Setup Complete ^ =====\n");
 
   // Start tasks
   telemetryStartTasks();

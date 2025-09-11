@@ -8,14 +8,23 @@
 // Optionally bring in thresholds later via dedicated config header
 #include "config/fc_config.h"
 
-namespace svc {
+namespace svc
+{
 
-static HealthResiduals s_last = {};
-static HealthSnapshot  s_hs = {};
+    static HealthResiduals s_last = {};
+    static HealthSnapshot s_hs = {};
 
-void health_init() {}
-void health_update() {}
-bool health_get(HealthResiduals &out) { out = s_last; return true; }
-bool health_get_flags(HealthSnapshot &out) { out = s_hs; return true; }
+    void health_init() {}
+    void health_update() {}
+    bool health_get(HealthResiduals &out)
+    {
+        out = s_last;
+        return true;
+    }
+    bool health_get_flags(HealthSnapshot &out)
+    {
+        out = s_hs;
+        return true;
+    }
 
 } // namespace svc

@@ -27,9 +27,13 @@ static SemaphoreHandle_t s_bmp1Data_mutex = nullptr; // protect local snapshot `
 static bmp_reading_t s_latest = {0};
 //* ===================
 
-//* ===== Task: BMP1 =====
+//* ===== Task: BMP1 (BMP390) =====
 static void task_sensor_bmp1(void *param)
 {
+  // Enter protected setup for BMP1
+  ENTER_CRITICAL(g_setup_mutex);
+
+  // Ensure data mutex exists
   if (!s_bmp1Data_mutex)
     s_bmp1Data_mutex = xSemaphoreCreateMutex();
 
@@ -57,6 +61,8 @@ static void task_sensor_bmp1(void *param)
   EXIT_CRITICAL(g_spi_mutex);
 
   LOGF("BMP390 #1 initialized, chipID=0x%02X (CS=%d)\n", id, PIN_CS_BMP1);
+  DEBUGLN("===== ^ BMP1 (BMP390) setup complete ^ =====\n");
+  EXIT_CRITICAL(g_setup_mutex);
 
   const TickType_t period = pdMS_TO_TICKS(BMP390_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();

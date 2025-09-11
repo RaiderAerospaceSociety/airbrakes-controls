@@ -10,23 +10,23 @@
 // I2C
 /** @brief I2C SDA pin number (override via -D PIN_SDA1=...). */
 #ifndef PIN_SDA1
-#define PIN_SDA1 33   // Feather S3 typical SDA
+#define PIN_SDA1 33 // Feather S3 typical SDA
 #endif
 /** @brief I2C SCL pin number (override via -D PIN_SCL1=...). */
 #ifndef PIN_SCL1
-#define PIN_SCL1 38   // Feather S3 typical SCL
+#define PIN_SCL1 38 // Feather S3 typical SCL
 #endif
 
 // SPI
 
 #ifndef PIN_SCK1
-#define PIN_SCK1 36  // Feather S3 SCK
+#define PIN_SCK1 36 // Feather S3 SCK
 #endif
 #ifndef PIN_MISO1
 #define PIN_MISO1 37 // Feather S3 MISO
 #endif
 #ifndef PIN_MOSI1
-#define PIN_MOSI1 35  // Feather S3 MOSI
+#define PIN_MOSI1 35 // Feather S3 MOSI
 #endif
 
 // SPI (cs)

@@ -1,4 +1,3 @@
-
 This directory is intended for project header files.
 
 A header file is a file containing C declarations and macro definitions
@@ -29,9 +28,9 @@ In C, the convention is to give header files names that end with `.h'.
 
 Read more about using header files in official GCC documentation:
 
-* Include Syntax
-* Include Operation
-* Once-Only Headers
-* Computed Includes
+- Include Syntax
+- Include Operation
+- Once-Only Headers
+- Computed Includes
 
 https://gcc.gnu.org/onlinedocs/cpp/Header-Files.html

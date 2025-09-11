@@ -57,10 +57,10 @@
 #define FC_MIN_DEPLOY_AGL_M 200.0f
 #endif
 #ifndef FC_TARGET_APOGEE_AGL_M
-#define FC_TARGET_APOGEE_AGL_M 3048.0f  // 10,000 ft
+#define FC_TARGET_APOGEE_AGL_M 3048.0f // 10,000 ft
 #endif
 #ifndef FC_APOGEE_HIGH_MARGIN_M
-#define FC_APOGEE_HIGH_MARGIN_M 45.0f   // ~150 ft
+#define FC_APOGEE_HIGH_MARGIN_M 45.0f // ~150 ft
 #endif
 
 // Retraction timing

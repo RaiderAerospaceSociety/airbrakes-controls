@@ -40,7 +40,7 @@
 
 // Deployment window guards: very low altitude/target for bench
 #undef FC_MIN_DEPLOY_AGL_M
-#define FC_MIN_DEPLOY_AGL_M 0.20f    // ~20 cm
+#define FC_MIN_DEPLOY_AGL_M 0.20f // ~20 cm
 #undef FC_TARGET_APOGEE_AGL_M
 #define FC_TARGET_APOGEE_AGL_M 0.25f // ~25 cm
 #undef FC_APOGEE_HIGH_MARGIN_M

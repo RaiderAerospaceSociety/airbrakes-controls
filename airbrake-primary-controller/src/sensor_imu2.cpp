@@ -1,7 +1,8 @@
-// ===== IMU2 Sensor Task (MPU6050) =====
+//* ===== IMU2 Sensor Task (MPU6050) =====
 // Brief: Polls MPU6050 (I2C) for accel, gyro, and temp; maps to body frame.
 // Refs: docs/sensors/mpu6050.md
-//* -- Includes --
+// MPU6050 Task Implementation & API
+//* ===== Includes =====
 #include <Arduino.h>
 #include <Wire.h>
 #include <freertos/FreeRTOS.h>
@@ -14,48 +15,70 @@
 #include "bus.h"
 #include "sensor_imu2.h"
 #include "config/sensors_config.h"
+#include "rtos_mutex.h"
 
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+//* ====================
 
-static SemaphoreHandle_t s_mutex = nullptr; // protect local snapshot
-static imu2_reading_t    s_latest = {0};
-static Adafruit_MPU6050  s_mpu;
+//* ===== Module Globals =====
+static SemaphoreHandle_t s_imu2Data_mutex = nullptr; // protect local snapshot `s_latest`
+static imu2_reading_t s_latest = {0};
+static Adafruit_MPU6050 s_imu2;
+//* ==========================
 
-static void imu2_task(void *param) {
-  if (!s_mutex) s_mutex = xSemaphoreCreateMutex();
+//* ===== Task: IMU2 (MPU6050) =====
+static void imu2_task(void *param)
+{
+  // Enter protected setup for IMU2
+  ENTER_CRITICAL(g_setup_mutex);
+
+  // Ensure data mutex exists
+  if (!s_imu2Data_mutex)
+    s_imu2Data_mutex = xSemaphoreCreateMutex();
 
   bool ok = false;
-  if (g_i2c_mutex) xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-  ok = s_mpu.begin(0x68, &Wire);
-  if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
-  if (!ok) {
+  if (g_i2c_mutex)
+    xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
+  ok = s_imu2.begin(0x68, &Wire);
+  if (g_i2c_mutex)
+    xSemaphoreGive(g_i2c_mutex);
+  if (!ok)
+  {
     LOGLN("IMU2 (MPU6050) not found at 0x68");
     // Try alternate address 0x69
-    if (g_i2c_mutex) xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-    ok = s_mpu.begin(0x69, &Wire);
-    if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
+    if (g_i2c_mutex)
+      xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
+    ok = s_imu2.begin(0x69, &Wire);
+    if (g_i2c_mutex)
+      xSemaphoreGive(g_i2c_mutex);
   }
-  if (!ok) {
+  if (!ok)
+  {
     LOGLN("IMU2 (MPU6050) init failed; task exiting");
     vTaskDelete(NULL);
     return;
   }
 
   // Configure ranges and filter
-  s_mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  s_mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  s_mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  s_imu2.setAccelerometerRange(MPU6050_RANGE_8_G);
+  s_imu2.setGyroRange(MPU6050_RANGE_500_DEG);
+  s_imu2.setFilterBandwidth(MPU6050_BAND_21_HZ);
   LOGLN("IMU2 (MPU6050) initialized");
+  EXIT_CRITICAL(g_setup_mutex);
+  DEBUGLN("===== ^ IMU2 (MPU6050) setup complete ^ =====\n");
 
   const TickType_t period = pdMS_TO_TICKS(IMU2_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
 
-  for (;;) {
+  for (;;)
+  {
     sensors_event_t a, g, temp;
-    if (g_i2c_mutex) xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-    s_mpu.getEvent(&a, &g, &temp);
-    if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
+    if (g_i2c_mutex)
+      xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
+    s_imu2.getEvent(&a, &g, &temp);
+    if (g_i2c_mutex)
+      xSemaphoreGive(g_i2c_mutex);
 
     imu2_reading_t r;
     // Convert m/s^2 to g, rad/s to deg/s
@@ -68,33 +91,47 @@ static void imu2_task(void *param) {
     float gx_s = g.gyro.x * RAD2DEG;
     float gy_s = g.gyro.y * RAD2DEG;
     float gz_s = g.gyro.z * RAD2DEG;
-    const float R[9] = { IMU2_R00, IMU2_R01, IMU2_R02,
-                         IMU2_R10, IMU2_R11, IMU2_R12,
-                         IMU2_R20, IMU2_R21, IMU2_R22 };
-    auto rot = [&](float x, float y, float z, float &xo, float &yo, float &zo){
-      xo = R[0]*x + R[1]*y + R[2]*z;
-      yo = R[3]*x + R[4]*y + R[5]*z;
-      zo = R[6]*x + R[7]*y + R[8]*z;
+    const float R[9] = {IMU2_R00, IMU2_R01, IMU2_R02,
+                        IMU2_R10, IMU2_R11, IMU2_R12,
+                        IMU2_R20, IMU2_R21, IMU2_R22};
+    auto rot = [&](float x, float y, float z, float &xo, float &yo, float &zo)
+    {
+      xo = R[0] * x + R[1] * y + R[2] * z;
+      yo = R[3] * x + R[4] * y + R[5] * z;
+      zo = R[6] * x + R[7] * y + R[8] * z;
     };
     rot(ax_s, ay_s, az_s, r.accel_g[0], r.accel_g[1], r.accel_g[2]);
     rot(gx_s, gy_s, gz_s, r.gyro_dps[0], r.gyro_dps[1], r.gyro_dps[2]);
     r.temp_c = temp.temperature;
     r.valid = true;
 
-    if (s_mutex) { xSemaphoreTake(s_mutex, portMAX_DELAY); s_latest = r; xSemaphoreGive(s_mutex); } else { s_latest = r; }
+    if (s_imu2Data_mutex)
+    {
+      xSemaphoreTake(s_imu2Data_mutex, portMAX_DELAY);
+      s_latest = r;
+      xSemaphoreGive(s_imu2Data_mutex);
+    }
+    else
+    {
+      s_latest = r;
+    }
     vTaskDelayUntil(&last, period);
   }
 }
 
-void imu2StartTask() {
+void imu2StartTask()
+{
   xTaskCreatePinnedToCore(imu2_task, "imu2", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool imu2Get(imu2_reading_t &out) {
+bool imu2Get(imu2_reading_t &out)
+{
   bool v;
-  if (s_mutex) xSemaphoreTake(s_mutex, portMAX_DELAY);
+  if (s_imu2Data_mutex)
+    xSemaphoreTake(s_imu2Data_mutex, portMAX_DELAY);
   out = s_latest;
   v = s_latest.valid;
-  if (s_mutex) xSemaphoreGive(s_mutex);
+  if (s_imu2Data_mutex)
+    xSemaphoreGive(s_imu2Data_mutex);
   return v;
 }

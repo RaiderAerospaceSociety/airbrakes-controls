@@ -10,11 +10,12 @@
  *  - gyro_dps[3]: body frame angular rate (deg/s)
  *  - temp_c: degrees Celsius
  */
-typedef struct {
-  float accel_g[3];   ///< Accel (g), body frame
-  float gyro_dps[3];  ///< Gyro (deg/s), body frame
-  float temp_c;       ///< Temperature (C)
-  bool  valid;        ///< True if the last read succeeded
+typedef struct
+{
+  float accel_g[3];  ///< Accel (g), body frame
+  float gyro_dps[3]; ///< Gyro (deg/s), body frame
+  float temp_c;      ///< Temperature (C)
+  bool valid;        ///< True if the last read succeeded
 } imu2_reading_t;
 
 /** @brief Start the IMU2 (MPU6050) polling task. */

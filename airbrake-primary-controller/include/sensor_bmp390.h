@@ -10,11 +10,12 @@
  *  - pressure_pa: Pascals
  *  - altitude_m: meters above MSL (Earth frame)
  */
-typedef struct {
+typedef struct
+{
   double temperature_c; ///< Temperature (Celsius)
   double pressure_pa;   ///< Pressure (Pa)
   double altitude_m;    ///< Altitude (m), Earth frame
-  bool   valid;         ///< True if the last read succeeded
+  bool valid;           ///< True if the last read succeeded
 } bmp_reading_t;
 
 /** @brief Start the BMP390 polling task (SPI). */

@@ -19,16 +19,18 @@
 #include <USFSMAX.h>
 //* ====================
 
+//* ===== External Globals =====
 extern float qt[2][4];
 extern int16_t accADC[2][3];
 extern float g_per_count;
 extern float heading[2];
 extern float angle[2][2];
 extern int32_t baroADC[2];
+//* ============================
 
 //* ===== Module Globals =====
 static I2Cdev s_i2c(&Wire);
-static USFSMAX s_usfs(&s_i2c, 0);
+static USFSMAX s_imu1(&s_i2c, 0);
 
 // Data handlers
 static SemaphoreHandle_t s_imu1Data_mutex = nullptr; // protect local snapshot `s_latest`
@@ -40,7 +42,8 @@ static void task_sensor_imu1(void *param)
 {
   // Enter protected setup for IMU1
   ENTER_CRITICAL(g_setup_mutex);
-  DEBUGLN("===== IMU1 (USFSMAX) setup... =====");
+
+  // Ensure data mutex
   if (!s_imu1Data_mutex)
     s_imu1Data_mutex = xSemaphoreCreateMutex();
 
@@ -73,7 +76,7 @@ static void task_sensor_imu1(void *param)
   }
 
   // Initialize USFSMAX via library routine
-  s_usfs.init_USFSMAX();
+  s_imu1.init_USFSMAX();
 
   WITH_MUTEX(g_i2c_mutex)
   {
@@ -81,7 +84,7 @@ static void task_sensor_imu1(void *param)
   }
 
   LOGLN("IMU1 (USFSMAX) initialized (library)");
-  DEBUGLN("===== IMU1 (USFSMAX) setup complete =====");
+  DEBUGLN("===== ^ IMU1 (USFSMAX) setup complete ^ =====\n");
   EXIT_CRITICAL(g_setup_mutex);
 
   const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
@@ -91,7 +94,6 @@ static void task_sensor_imu1(void *param)
   static float last_altitude_m = NAN;
   for (;;)
   {
-    // Poll at a fixed rate; no DRDY gating
     // Follow example: read event status to optimize what to fetch
     uint8_t evt = 0;
     s_i2c.readBytes(MAX32660_SLV_ADDR, COMBO_DRDY_STAT, 1, &evt);
@@ -103,34 +105,34 @@ static void task_sensor_imu1(void *param)
     case 0x01:
     case 0x02:
     case 0x03:
-      s_usfs.GyroAccel_getADC();
+      s_imu1.GyroAccel_getADC();
       break;
     case 0x07:
     case 0x0B:
     case 0x0F:
-      s_usfs.GyroAccelMagBaro_getADC();
+      s_imu1.GyroAccelMagBaro_getADC();
       break;
     case 0x0C:
-      s_usfs.MagBaro_getADC();
+      s_imu1.MagBaro_getADC();
       break;
     case 0x04:
-      s_usfs.MAG_getADC();
+      s_imu1.MAG_getADC();
       break;
     case 0x08:
-      s_usfs.BARO_getADC();
+      s_imu1.BARO_getADC();
       break;
     default:
       // No combined sensor flags; still attempt to read accel to keep it fresh
-      s_usfs.ACC_getADC();
+      s_imu1.ACC_getADC();
       break;
     }
 
     if (evt & 0x10)
     {
       // New quaternion available
-      s_usfs.getQUAT();
+      s_imu1.getQUAT();
       // Also fetch Euler for visibility/debug
-      s_usfs.getEULER();
+      s_imu1.getEULER();
     }
 
     //* -- Snapshot Build --
@@ -152,17 +154,10 @@ static void task_sensor_imu1(void *param)
     r.pressure_pa = last_pressure_pa;
     r.altitude_m = last_altitude_m;
     r.valid = true;
-    if (s_imu1Data_mutex)
-    {
-      xSemaphoreTake(s_imu1Data_mutex, portMAX_DELAY);
-      s_latest = r;
-      xSemaphoreGive(s_imu1Data_mutex);
-    }
-    else
+    WITH_MUTEX(s_imu1Data_mutex)
     {
       s_latest = r;
     }
-    //
     vTaskDelayUntil(&last, period);
   }
 }

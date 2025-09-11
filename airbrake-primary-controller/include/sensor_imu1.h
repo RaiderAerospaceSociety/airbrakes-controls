@@ -11,12 +11,13 @@
  *  - pressure_pa: internal baro pressure (Pa)
  *  - altitude_m: internal baro altitude (m), Earth frame
  */
-typedef struct {
+typedef struct
+{
   float quat[4];     ///< Orientation quaternion w,x,y,z (body→earth)
   float accel_g[3];  ///< Acceleration (g) in body frame
   float pressure_pa; ///< Internal baro pressure (Pa)
   float altitude_m;  ///< Internal baro altitude (m), Earth frame
-  bool  valid;       ///< True if data is valid
+  bool valid;        ///< True if data is valid
 } imu1_reading_t;
 
 /** @brief Start the IMU1 (USFSMAX) polling task. */
