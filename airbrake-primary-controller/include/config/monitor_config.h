@@ -23,7 +23,7 @@
 //  - SERIAL_DATA_ENABLE: high-rate data lines (plotting/current state)
 //  - SERIAL_DEBUG_ENABLE: human-readable status/debug messages
 #ifndef SERIAL_DATA_ENABLE
-#define SERIAL_DATA_ENABLE 0 // default OFF to reduce serial spam
+#define SERIAL_DATA_ENABLE 1 // default OFF to reduce serial spam
 #endif
 #ifndef SERIAL_DEBUG_ENABLE
 #define SERIAL_DEBUG_ENABLE 1 // default ON for setup/status messages
