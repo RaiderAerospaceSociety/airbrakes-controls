@@ -1,8 +1,8 @@
-// ===== IMU1 Sensor Task (USFSMAX) =====
+//* ===== IMU1 Sensor Task (USFSMAX) =====
 // Brief: Polls USFSMAX (I2C) for quaternion, accel, and internal baro.
 // Refs: docs/sensors/usfsmax.md, docs/signals.md
-//* -- Includes --
-// USFSMAX reader using upstream library (USFSMAX + I2Cdev)
+// USFSMAX Task Implementation & API
+//* ===== Includes =====
 #include <Arduino.h>
 #include <Wire.h>
 #include <freertos/FreeRTOS.h>
@@ -15,10 +15,9 @@
 #include "logging.h"
 #include "bus.h"
 #include "sensor_imu1.h"
-
-//* -- Library Bridge --
+#include "rtos_mutex.h"
 #include <USFSMAX.h>
-//
+//* ====================
 
 extern float qt[2][4];
 extern int16_t accADC[2][3];
@@ -27,29 +26,32 @@ extern float heading[2];
 extern float angle[2][2];
 extern int32_t baroADC[2];
 
-//* -- Module Globals --
-static SemaphoreHandle_t s_usfs_mutex = nullptr; // protect local snapshot
-static imu1_reading_t s_latest = {0};
-
+//* ===== Module Globals =====
 static I2Cdev s_i2c(&Wire);
 static USFSMAX s_usfs(&s_i2c, 0);
-//
 
-//* -- Task --
-static void usfs_task(void *param) {
-  if (!s_usfs_mutex) s_usfs_mutex = xSemaphoreCreateMutex();
+// Data handlers
+static SemaphoreHandle_t s_imu1Data_mutex = nullptr; // protect local snapshot `s_latest`
+static imu1_reading_t s_latest = {0};
+//* ==========================
 
-  // DRDY is not used; we poll at a fixed rate
+//* ===== Task: IMU1 (USFSMAX) =====
+static void task_sensor_imu1(void *param)
+{
+  if (!s_imu1Data_mutex)
+    s_imu1Data_mutex = xSemaphoreCreateMutex();
 
-  if (g_i2c_mutex) xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-  Wire.setClock(100000); // 100kHz for configuration
-  if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
+  WITH_MUTEX(g_i2c_mutex)
+  {
+    Wire.setClock(100000); // 100kHz for configuration
+  }
 
   s_usfs.init_USFSMAX();
 
-  if (g_i2c_mutex) xSemaphoreTake(g_i2c_mutex, portMAX_DELAY);
-  Wire.setClock(I2C_CLOCK);
-  if (g_i2c_mutex) xSemaphoreGive(g_i2c_mutex);
+  WITH_MUTEX(g_i2c_mutex)
+  {
+    Wire.setClock(I2C_CLOCK);
+  }
 
   LOGLN("IMU1 (USFSMAX) initialized (library)");
 
@@ -57,8 +59,9 @@ static void usfs_task(void *param) {
   TickType_t last = xTaskGetTickCount();
   //* -- Main Task Loop --
   static float last_pressure_pa = NAN;
-  static float last_altitude_m  = NAN;
-  for (;;) {
+  static float last_altitude_m = NAN;
+  for (;;)
+  {
     // Poll at a fixed rate; no DRDY gating
     // Follow example: read event status to optimize what to fetch
     uint8_t evt = 0;
@@ -66,33 +69,35 @@ static void usfs_task(void *param) {
 
     // Bits: 0x01 Gyro, 0x02 Acc, 0x04 Mag, 0x08 Baro, 0x10 Quat
     uint8_t call_sensors = evt & 0x0F;
-    switch (call_sensors) {
-      case 0x01:
-      case 0x02:
-      case 0x03:
-        s_usfs.GyroAccel_getADC();
-        break;
-      case 0x07:
-      case 0x0B:
-      case 0x0F:
-        s_usfs.GyroAccelMagBaro_getADC();
-        break;
-      case 0x0C:
-        s_usfs.MagBaro_getADC();
-        break;
-      case 0x04:
-        s_usfs.MAG_getADC();
-        break;
-      case 0x08:
-        s_usfs.BARO_getADC();
-        break;
-      default:
-        // No combined sensor flags; still attempt to read accel to keep it fresh
-        s_usfs.ACC_getADC();
-        break;
+    switch (call_sensors)
+    {
+    case 0x01:
+    case 0x02:
+    case 0x03:
+      s_usfs.GyroAccel_getADC();
+      break;
+    case 0x07:
+    case 0x0B:
+    case 0x0F:
+      s_usfs.GyroAccelMagBaro_getADC();
+      break;
+    case 0x0C:
+      s_usfs.MagBaro_getADC();
+      break;
+    case 0x04:
+      s_usfs.MAG_getADC();
+      break;
+    case 0x08:
+      s_usfs.BARO_getADC();
+      break;
+    default:
+      // No combined sensor flags; still attempt to read accel to keep it fresh
+      s_usfs.ACC_getADC();
+      break;
     }
 
-    if (evt & 0x10) {
+    if (evt & 0x10)
+    {
       // New quaternion available
       s_usfs.getQUAT();
       // Also fetch Euler for visibility/debug
@@ -109,19 +114,23 @@ static void usfs_task(void *param) {
     r.accel_g[1] = accADC[0][1] * g_per_count;
     r.accel_g[2] = accADC[0][2] * g_per_count;
     // Internal baro sample: update only when a new BARO event was indicated
-    if (evt & 0x08) {
+    if (evt & 0x08)
+    {
       // LPS22HB output: 4096 LSB/hPa => 100/4096 Pa per count
       last_pressure_pa = ((float)baroADC[0]) * (100.0f / 4096.0f);
-      last_altitude_m  = 44330.0f * (1.0f - pow((last_pressure_pa / 100.0f) / SEALEVELPRESSURE_HPA, 0.1903f));
+      last_altitude_m = 44330.0f * (1.0f - pow((last_pressure_pa / 100.0f) / SEALEVELPRESSURE_HPA, 0.1903f));
     }
     r.pressure_pa = last_pressure_pa;
-    r.altitude_m  = last_altitude_m;
-    r.valid   = true;
-    if (s_usfs_mutex) {
-      xSemaphoreTake(s_usfs_mutex, portMAX_DELAY);
+    r.altitude_m = last_altitude_m;
+    r.valid = true;
+    if (s_imu1Data_mutex)
+    {
+      xSemaphoreTake(s_imu1Data_mutex, portMAX_DELAY);
       s_latest = r;
-      xSemaphoreGive(s_usfs_mutex);
-    } else {
+      xSemaphoreGive(s_imu1Data_mutex);
+    }
+    else
+    {
       s_latest = r;
     }
     //
@@ -130,15 +139,19 @@ static void usfs_task(void *param) {
 }
 //
 
-void imu1StartTask() {
-  xTaskCreatePinnedToCore(usfs_task, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
+void imu1StartTask()
+{
+  xTaskCreatePinnedToCore(task_sensor_imu1, "usfsmax", 4096, nullptr, TASK_PRIO_BMP390, nullptr, APP_CPU_NUM);
 }
 
-bool imu1Get(imu1_reading_t &out) {
+bool imu1Get(imu1_reading_t &out)
+{
   bool v;
-  if (s_usfs_mutex) xSemaphoreTake(s_usfs_mutex, portMAX_DELAY);
+  if (s_imu1Data_mutex)
+    xSemaphoreTake(s_imu1Data_mutex, portMAX_DELAY);
   out = s_latest;
   v = s_latest.valid;
-  if (s_usfs_mutex) xSemaphoreGive(s_usfs_mutex);
+  if (s_imu1Data_mutex)
+    xSemaphoreGive(s_imu1Data_mutex);
   return v;
 }

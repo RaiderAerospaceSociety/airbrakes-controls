@@ -1,8 +1,8 @@
-// ===== BMP390 Sensor Task =====
+//* ===== BMP390 Sensor Task =====
 // Brief: Polls BMP390 over SPI and snapshots pressure/temperature/altitude.
 // Refs: docs/sensors/bmp390.md, docs/signals.md
+// BMP390 Task Implementation & API
 //* ===== Includes =====
-// BMP390 task implementation
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -18,16 +18,21 @@
 #include "rtos_mutex.h"
 //* ====================
 
-//* ===== Globals =====
+//* ===== Module Globals =====
 static Adafruit_BMP3XX s_bmp1;
 static bool s_bmp1_ok = false;
-static SemaphoreHandle_t s_data_mutex = nullptr;
+
+// Data handlers
+static SemaphoreHandle_t s_bmp1Data_mutex = nullptr; // protect local snapshot `s_latest`
 static bmp_reading_t s_latest = {0};
 //* ===================
 
 //* ===== Task: BMP1 =====
 static void task_sensor_bmp1(void *param)
 {
+  if (!s_bmp1Data_mutex)
+    s_bmp1Data_mutex = xSemaphoreCreateMutex();
+
   // Initialize BMP1 on shared SPI
   WITH_MUTEX(g_spi_mutex)
   {
@@ -71,13 +76,8 @@ static void task_sensor_bmp1(void *param)
       r.pressure_pa = s_bmp1.pressure;
       r.altitude_m = 44330.0 * (1.0 - pow((r.pressure_pa / 100.0F) / SEALEVELPRESSURE_HPA, 0.1903));
       r.valid = true;
-      if (s_data_mutex)
-      {
-        xSemaphoreTake(s_data_mutex, portMAX_DELAY);
-        s_latest = r;
-        xSemaphoreGive(s_data_mutex);
-      }
-      else
+
+      WITH_MUTEX(s_bmp1Data_mutex)
       {
         s_latest = r;
       }
@@ -96,9 +96,9 @@ static void task_sensor_bmp1(void *param)
 void bmp390StartTask()
 {
   // Mutex for protecting s_latest
-  if (!s_data_mutex)
+  if (!s_bmp1Data_mutex)
   {
-    s_data_mutex = xSemaphoreCreateMutex();
+    s_bmp1Data_mutex = xSemaphoreCreateMutex();
   }
 
   // Task for BMP1
@@ -109,17 +109,17 @@ void bmp390StartTask()
 bool bmp390Get(bmp_reading_t &out)
 {
   bool valid;
-  if (s_data_mutex)
+  if (s_bmp1Data_mutex)
   {
-    xSemaphoreTake(s_data_mutex, portMAX_DELAY);
+    xSemaphoreTake(s_bmp1Data_mutex, portMAX_DELAY);
   }
 
   out = s_latest;
   valid = s_latest.valid;
 
-  if (s_data_mutex)
+  if (s_bmp1Data_mutex)
   {
-    xSemaphoreGive(s_data_mutex);
+    xSemaphoreGive(s_bmp1Data_mutex);
   }
   return valid;
 }
