@@ -64,7 +64,6 @@ static void task_sensor_bmp1(void *param)
   DEBUGLN("===== ^ BMP1 (BMP390) setup complete ^ =====\n");
   EXIT_CRITICAL(g_setup_mutex);
 
-  const TickType_t period = pdMS_TO_TICKS(BMP390_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
@@ -92,7 +91,7 @@ static void task_sensor_bmp1(void *param)
     {
       DEBUGLN("BMP390 read failed");
     }
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(BMP390_PERIOD_MS));
   }
 }
 //* ======================

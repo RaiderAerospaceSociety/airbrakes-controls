@@ -60,7 +60,6 @@ namespace svc
   //* -- Task --
   static void fusion_task(void *param)
   {
-    const TickType_t period = pdMS_TO_TICKS(TELEM_PERIOD_MS);
     TickType_t last = xTaskGetTickCount();
     const float G0 = 9.80665f;
     static bool have_prev_alt = false;
@@ -363,7 +362,7 @@ namespace svc
       if (s_alt_mutex)
         xSemaphoreGive(s_alt_mutex);
 
-      vTaskDelayUntil(&last, period);
+      vTaskDelayUntil(&last, pdMS_TO_TICKS(TELEM_PERIOD_MS));
     }
   }
 

@@ -63,7 +63,6 @@ static void imu2_task(void *param)
   DEBUGLN("===== ^ IMU2 (MPU6050) setup complete ^ =====\n");
   EXIT_CRITICAL(g_setup_mutex);
 
-  const TickType_t period = pdMS_TO_TICKS(IMU2_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
@@ -109,7 +108,7 @@ static void imu2_task(void *param)
     {
       s_latest = r;
     }
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(IMU2_PERIOD_MS));
   }
 }
 

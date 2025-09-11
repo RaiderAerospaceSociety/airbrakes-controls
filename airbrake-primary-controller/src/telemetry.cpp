@@ -132,7 +132,6 @@ static void task_telem_agg(void *param)
   if (!s_telem_mutex)
     s_telem_mutex = xSemaphoreCreateMutex();
   uint32_t seq = 0;
-  const TickType_t period = pdMS_TO_TICKS(TELEM_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
@@ -148,7 +147,7 @@ static void task_telem_agg(void *param)
     if (s_telem_q)
       xQueueSend(s_telem_q, &rec, 0);
 #endif
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(TELEM_PERIOD_MS));
   }
 }
 

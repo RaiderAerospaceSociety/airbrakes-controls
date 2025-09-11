@@ -362,7 +362,6 @@ namespace svc
 
   static void fc_task(void *param)
   {
-    const TickType_t period = pdMS_TO_TICKS(TELEM_PERIOD_MS);
     TickType_t last = xTaskGetTickCount();
     uint32_t prev_ms = millis();
     if (!s_mutex)
@@ -381,7 +380,7 @@ namespace svc
       // Update gates/flags then FSM
       fc_update_flags(f, dt);
       fc_update_fsm(f, now, dt);
-      vTaskDelayUntil(&last, period);
+      vTaskDelayUntil(&last, pdMS_TO_TICKS(TELEM_PERIOD_MS));
     }
   }
 

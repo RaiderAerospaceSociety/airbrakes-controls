@@ -22,7 +22,6 @@
 
 static void task_logger(void *param)
 {
-  const TickType_t period = pdMS_TO_TICKS(LOGGER_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
@@ -32,7 +31,7 @@ static void task_logger(void *param)
     svc::fusionGetAlt(f_min);
     Serial.print("tilt_deg:");
     Serial.println(f_min.tilt_deg, 2);
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(LOGGER_PERIOD_MS));
     continue;
 #endif
     // Unified one-line output with key:value pairs
@@ -223,7 +222,7 @@ static void task_logger(void *param)
 
 #endif // SERIAL_DATA_ENABLE
 
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(LOGGER_PERIOD_MS));
   }
 }
 

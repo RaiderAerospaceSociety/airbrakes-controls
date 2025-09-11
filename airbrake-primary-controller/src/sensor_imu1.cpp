@@ -87,7 +87,6 @@ static void task_sensor_imu1(void *param)
   DEBUGLN("===== ^ IMU1 (USFSMAX) setup complete ^ =====\n");
   EXIT_CRITICAL(g_setup_mutex);
 
-  const TickType_t period = pdMS_TO_TICKS(USFS_PERIOD_MS);
   TickType_t last = xTaskGetTickCount();
 
   //* ===== Main Task Loop =====
@@ -160,7 +159,7 @@ static void task_sensor_imu1(void *param)
     {
       s_latest = r;
     }
-    vTaskDelayUntil(&last, period);
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(USFS_PERIOD_MS));
   }
   //* ==========================
 }
