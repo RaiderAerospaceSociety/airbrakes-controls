@@ -6,7 +6,7 @@
 
 #include "services/fc.h"
 #include "services/fusion.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "config/fc_config.h"
@@ -47,7 +47,7 @@ namespace svc
   {
     // Sensor validity
     bmp_reading_t b;
-    bool vb = bmp390Get(b) && b.valid;
+    bool vb = bmp1Get(b) && b.valid;
     imu1_reading_t u1;
     bool v1 = imu1Get(u1) && u1.valid;
     imu2_reading_t u2;

@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "bus.h"
 #include "board.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "task_led.h"

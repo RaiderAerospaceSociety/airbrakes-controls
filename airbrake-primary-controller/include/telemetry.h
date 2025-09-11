@@ -38,7 +38,7 @@ struct TelemetryHeader
 };
 
 /** @brief Telemetry section for BMP390. */
-struct TelemetryBmp390
+struct TelemetryBmp1
 {
   float temperature_c; ///< Temperature (C)
   float pressure_pa;   ///< Pressure (Pa)
@@ -91,7 +91,7 @@ struct TelemetryControl
 struct TelemetryRecord
 {
   TelemetryHeader hdr;
-  TelemetryBmp390 bmp390;
+  TelemetryBmp1 bmp390;
   TelemetryImu1 imu1;
   TelemetryImu2 imu2;
   TelemetrySystem sys;

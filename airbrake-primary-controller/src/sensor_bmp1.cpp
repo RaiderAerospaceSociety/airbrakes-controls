@@ -14,7 +14,7 @@
 #include "logging.h"
 #include "bus.h"
 #include "pins.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "rtos_mutex.h"
 //* ====================
 
@@ -111,7 +111,7 @@ void bmp1StartTask()
 }
 
 // Retrieves the latest reading (snapshot) from the BMP390; returns true if valid bmp_reading_t was obtained
-bool bmp390Get(bmp_reading_t &out)
+bool bmp1Get(bmp_reading_t &out)
 {
   bool valid;
   WITH_MUTEX(s_bmp1Data_mutex)

@@ -25,4 +25,4 @@ void bmp1StartTask();
  *  @param out Filled with the latest reading (see units above).
  *  @return true if data is valid.
  */
-bool bmp390Get(bmp_reading_t &out);
+bool bmp1Get(bmp_reading_t &out);

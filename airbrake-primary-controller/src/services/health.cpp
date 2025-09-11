@@ -1,7 +1,7 @@
 // Simple health service placeholder with flags snapshot
 #include <Arduino.h>
 #include "services/health.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "services/fusion.h"
 

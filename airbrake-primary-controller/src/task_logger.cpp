@@ -10,7 +10,7 @@
 
 #include "app_config.h"
 #include "logging.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "telemetry.h"

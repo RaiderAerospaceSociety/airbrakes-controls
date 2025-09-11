@@ -9,7 +9,7 @@
 
 #include "app_config.h"
 #include "services/fusion.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 
 namespace svc
@@ -82,7 +82,7 @@ namespace svc
     {
       // Read raw altitudes
       bmp_reading_t b;
-      bool vb = bmp390Get(b) && b.valid;
+      bool vb = bmp1Get(b) && b.valid;
       imu1_reading_t u1;
       bool vi = imu1Get(u1) && u1.valid;
       float bmp_alt = vb ? (float)b.altitude_m : NAN;

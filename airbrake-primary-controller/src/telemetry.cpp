@@ -10,7 +10,7 @@
 
 #include "app_config.h"
 #include "telemetry.h"
-#include "sensor_bmp390.h"
+#include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "logging.h"
@@ -65,7 +65,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
   rec.hdr.present_flags = TP_BMP390 | TP_IMU1 | TP_IMU2 | TP_SYSTEM | TP_CONTROL;
 
   bmp_reading_t bmp;
-  if (bmp390Get(bmp) && bmp.valid)
+  if (bmp1Get(bmp) && bmp.valid)
   {
     rec.bmp390.temperature_c = bmp.temperature_c;
     rec.bmp390.pressure_pa = bmp.pressure_pa;
