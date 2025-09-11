@@ -6,7 +6,6 @@
 #include <Arduino.h>
 #include <UMS3.h>
 
-
 // App modules
 #include "app_config.h"
 #include "logging.h"
@@ -20,19 +19,22 @@
 #include "telemetry.h"
 #include "services/fusion.h"
 #include "services/fc.h"
-// SD probe moved to bus.cpp; call via bus_probe_sd() when enabled
 //* ====================
 
-
 //* ===== Globals =====
-// Note: Define the board object here so tasks can use it via board.h extern
+//? Note: Define the board object here so tasks can use it via board.h extern
 UMS3 ums3;
 //* ===================
 
 //* ===== Setup =====
-void setup() {
+void setup()
+{
+  // Begin Serial for debug output
   Serial.begin(115200);
-  while (!Serial) {}
+  // Wait for Serial
+  while (!Serial)
+  {
+  }
   delay(1000);
 
   // Board setup
@@ -47,17 +49,18 @@ void setup() {
   delay(200);
   bus_scan_i2c();
 
-  // Desk Mode Alert
+  // Probe SD card (if enabled app_config.h)
+#if SD_PROBE_ON_BOOT
+  bus_probe_sd();
+#endif
+
+  // Desk Mode Alert (if enabled app_config.h)
 #if defined(DESK_MODE) && DESK_MODE
   DEBUGLN("Desk Mode: ON (scaled thresholds, reduced durations)");
 #endif
 
   // Set initial LED to red; task_led will update as subsystems come online
   ums3.setPixelColor(0xFF0000);
-
-#if SD_PROBE_ON_BOOT
-  bus_probe_sd();
-#endif
 
   // Start tasks
   telemetryStartTasks();
@@ -69,10 +72,11 @@ void setup() {
   ledStartTask();
   loggerStartTask();
 }
-//
+//* =================
 
-//* -- Loop --
-void loop() {
+//* ===== Loop ===== (Does nothing; all work is in tasks)
+void loop()
+{
   vTaskDelay(portMAX_DELAY);
 }
-//
+//* ================
