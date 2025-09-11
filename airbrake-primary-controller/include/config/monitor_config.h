@@ -8,25 +8,25 @@
 
 // Serial plotter vs CSV (legacy)
 #ifndef SERIAL_PLOTTER_MODE
-#define SERIAL_PLOTTER_MODE 1   // 1 = VSCode Serial Plotter format, 0 = CSV
+#define SERIAL_PLOTTER_MODE 1 // 1 = VSCode Serial Plotter format, 0 = CSV
 #endif
 
 // Teleplot output
 #ifndef TELEPLOT_MODE
-#define TELEPLOT_MODE 0         // default OFF; use unified key:value line format
+#define TELEPLOT_MODE 0 // default OFF; use unified key:value line format
 #endif
 #ifndef TELEPLOT_INCLUDE_TS
-#define TELEPLOT_INCLUDE_TS 0   // 1 = include millis() timestamp in Teleplot lines
+#define TELEPLOT_INCLUDE_TS 0 // 1 = include millis() timestamp in Teleplot lines
 #endif
 
 // High-level serial output toggles
 //  - SERIAL_DATA_ENABLE: high-rate data lines (plotting/current state)
 //  - SERIAL_DEBUG_ENABLE: human-readable status/debug messages
 #ifndef SERIAL_DATA_ENABLE
-#define SERIAL_DATA_ENABLE 1    // default OFF to reduce serial spam
+#define SERIAL_DATA_ENABLE 0 // default OFF to reduce serial spam
 #endif
 #ifndef SERIAL_DEBUG_ENABLE
-#define SERIAL_DEBUG_ENABLE 1   // default ON for setup/status messages
+#define SERIAL_DEBUG_ENABLE 1 // default ON for setup/status messages
 #endif
 
 // Map legacy DEBUG_ENABLED to SERIAL_DEBUG_ENABLE so DEBUG* macros follow
@@ -40,7 +40,7 @@
 
 // Single-value plot helper (used for A/B testing plot plugins)
 #ifndef VIS_TILT_ONLY_MODE
-#define VIS_TILT_ONLY_MODE 0     // 1 = emit only "tilt_deg:<angle>" lines
+#define VIS_TILT_ONLY_MODE 0 // 1 = emit only "tilt_deg:<angle>" lines
 #endif
 #ifndef PLOT_SINGLE_ONLY
 #define PLOT_SINGLE_ONLY 0
@@ -65,11 +65,11 @@
 
 // Unified monitor output profile and options
 #ifndef MON_UNIFIED_OUTPUT
-#define MON_UNIFIED_OUTPUT 1   // 1 = use unified one-line key:value output
+#define MON_UNIFIED_OUTPUT 1 // 1 = use unified one-line key:value output
 #endif
 #ifndef MON_PROFILE_FULL
-#define MON_PROFILE_FULL 0     // 1 = emit extended set of metrics
+#define MON_PROFILE_FULL 0 // 1 = emit extended set of metrics
 #endif
 #ifndef MON_DEBUG_BLOCK
-#define MON_DEBUG_BLOCK 0      // 1 = emit additional human-readable debug after data line
+#define MON_DEBUG_BLOCK 0 // 1 = emit additional human-readable debug after data line
 #endif

@@ -46,6 +46,30 @@ static void task_sensor_imu1(void *param)
     Wire.setClock(100000); // 100kHz for configuration
   }
 
+  // Probe USFSMAX presence by reading a known register (FIRMWARE_ID)
+  bool imu_present = false;
+  uint8_t fw = 0xFF;
+  for (int tries = 0; tries < 3 && !imu_present; ++tries)
+  {
+    WITH_MUTEX(g_i2c_mutex)
+    {
+      fw = s_i2c.readByte(MAX32660_SLV_ADDR, FIRMWARE_ID);
+    }
+    // On NACK, Wire.read() returns -1 which becomes 0xFF; 0x00 is also unlikely for a valid FW ID
+    if (fw != 0xFF && fw != 0x00)
+      imu_present = true;
+    else
+      vTaskDelay(pdMS_TO_TICKS(10));
+  }
+
+  if (!imu_present)
+  {
+    LOGLN("IMU1 (USFSMAX) not found (check wiring)");
+    vTaskDelete(nullptr);
+    return;
+  }
+
+  // Initialize USFSMAX via library routine
   s_usfs.init_USFSMAX();
 
   WITH_MUTEX(g_i2c_mutex)
