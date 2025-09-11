@@ -6,6 +6,7 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <math.h>
 
 #include "app_config.h"
 #include "logging.h"
@@ -30,86 +31,66 @@ static void task_logger(void *param) {
     vTaskDelayUntil(&last, period);
     continue;
 #endif
-    // VS Code Serial Plotter format: ">label:value,label:value"
+    // Unified one-line output with key:value pairs
     TelemetryRecord rec; telemetryGetLatest(rec);
     svc::FusedAlt f; svc::fusionGetAlt(f);
     bool agl_ready = f.agl_ready;
 
-    // Teleplot vs Serial Plotter output
-#if SERIAL_DATA_ENABLE
-#if defined(TELEPLOT_MODE) && TELEPLOT_MODE
-    // Teleplot: output one telemetry per line: name[:timestamp]:value
-#if TELEPLOT_INCLUDE_TS
-    #define TP_LINE(name, val, prec) do { \
-      Serial.print(">");Serial.print(name); Serial.print(":"); \
-      Serial.print((uint32_t)millis()); Serial.print(":"); \
-      Serial.println((val), (prec)); \
-    } while (0)
-#else
-    #define TP_LINE(name, val, prec) do { \
-      Serial.print(">");Serial.print(name); Serial.print(":"); \
-      Serial.println((val), (prec)); \
-    } while (0)
-#endif
-// (keep TP_LINE scope open until after emission)
+#if SERIAL_DATA_ENABLE && MON_UNIFIED_OUTPUT
+    auto begin_line = [](){
+      Serial.print("ts:"); Serial.print((uint32_t)millis());
+    };
+    auto kv_f = [](const char* key, float val, int prec){
+      Serial.print(", "); Serial.print(key); Serial.print(":");
+      if (isnan(val)) Serial.print("nan"); else Serial.print(val, prec);
+    };
+    auto kv_i = [](const char* key, int32_t val){
+      Serial.print(", "); Serial.print(key); Serial.print(":"); Serial.print(val);
+    };
 
-#if defined(PLOT_SINGLE_ONLY) && PLOT_SINGLE_ONLY
-    TP_LINE(PLOT_SINGLE_LABEL, (PLOT_SINGLE_EXPR), 3);
+    begin_line();
+#if VIS_TILT_ONLY_MODE
+    kv_f("tilt_deg", f.tilt_deg, 2);
 #else
-    TP_LINE("bmp1_alt_m",          f.bmp1_alt_m, 3);
-    TP_LINE("imu1_baro_alt_m",     f.imu1_alt_m, 3);
-    TP_LINE("agl_bmp1_m",          agl_ready ? f.agl_bmp1_m     : NAN, 3);
-    TP_LINE("agl_imu1_m",          agl_ready ? f.agl_imu1_m     : NAN, 3);
-    TP_LINE("agl_fused_m",         agl_ready ? f.agl_fused_m    : NAN, 3);
-    TP_LINE("vz_baro_mps",         agl_ready ? f.vz_mps         : NAN, 3);
-#if FUSION_USE_ACC_INT
-    TP_LINE("vz_acc_mps",          agl_ready ? f.vz_acc_mps     : NAN, 3);
-#endif
-    TP_LINE("vz_fused_mps",        agl_ready ? f.vz_fused_mps   : NAN, 3);
-    TP_LINE("az_imu1_mps2",        f.az_imu1_mps2, 3);
-    TP_LINE("temp_C",              f.temp_c, 3);
-    TP_LINE("press_hPa",           f.press_hPa, 3);
-    TP_LINE("sos_mps",             f.sos_mps, 3);
-    TP_LINE("mach_vz",             f.mach_vz, 4);
-    TP_LINE("sos_min_mps",         f.sos_min_mps, 3);
-    TP_LINE("mach_cons",           f.mach_cons, 4);
-    TP_LINE("tilt_deg",            f.tilt_deg, 2);
-    TP_LINE("tilt_az_deg360",      f.tilt_az_deg360, 2);
-    TP_LINE("t_apogee_s",          f.t_apogee_s, 3);
-    TP_LINE("apogee_agl_m",        f.apogee_agl_m, 2);
-#endif
-    #undef TP_LINE
-#else
-    // Legacy VS Code Serial Plotter: single line with comma-separated pairs
-    Serial.print(">bmp1_alt_m:"); Serial.print(f.bmp1_alt_m, 3);
-    Serial.print(",imu1_baro_alt_m:"); Serial.print(f.imu1_alt_m, 3);
-    Serial.print(",agl_bmp1_m:"); Serial.print(agl_ready ? f.agl_bmp1_m : NAN, 3);
-    Serial.print(",agl_imu1_m:"); Serial.print(agl_ready ? f.agl_imu1_m : NAN, 3);
-    Serial.print(",agl_fused_m:"); Serial.print(agl_ready ? f.agl_fused_m : NAN, 3);
-    Serial.print(",vz_baro_mps:"); Serial.print(agl_ready ? f.vz_mps : NAN, 3);
-#if FUSION_USE_ACC_INT
-    Serial.print(",vz_acc_mps:"); Serial.print(agl_ready ? f.vz_acc_mps : NAN, 3);
-#endif
-
-    Serial.print(",vz_fused_mps:"); Serial.print(agl_ready ? f.vz_fused_mps : NAN, 3);
-    Serial.print(",az_imu1_mps2:"); Serial.print(f.az_imu1_mps2, 3);
-    Serial.print(",temp_C:"); Serial.print(f.temp_c, 3);
-    Serial.print(",press_hPa:"); Serial.print(f.press_hPa, 3);
-    Serial.print(",sos_mps:"); Serial.print(f.sos_mps, 3);
-    Serial.print(",mach_vz:"); Serial.print(f.mach_vz, 4);
-    Serial.print(",sos_min_mps:"); Serial.print(f.sos_min_mps, 3);
-    Serial.print(",mach_cons:"); Serial.print(f.mach_cons, 4);
-    Serial.print(",tilt_deg:"); Serial.print(f.tilt_deg, 2);
-    Serial.print(",tilt_az_deg360:"); Serial.print(f.tilt_az_deg360, 2);
-    Serial.print(",t_apogee_s:"); Serial.print(f.t_apogee_s, 3);
-    Serial.print(",apogee_agl_m:"); Serial.print(f.apogee_agl_m, 2);
+  #if MON_PROFILE_FULL
+    // Extended set
+    kv_f("bmp1_alt_m",      f.bmp1_alt_m, 3);
+    kv_f("imu1_baro_alt_m", f.imu1_alt_m, 3);
+    kv_f("agl_bmp1_m",      agl_ready ? f.agl_bmp1_m : NAN, 3);
+    kv_f("agl_imu1_m",      agl_ready ? f.agl_imu1_m : NAN, 3);
+    kv_f("agl_fused_m",     agl_ready ? f.agl_fused_m : NAN, 3);
+    kv_f("vz_baro_mps",     agl_ready ? f.vz_mps      : NAN, 3);
+   #if FUSION_USE_ACC_INT
+    kv_f("vz_acc_mps",      agl_ready ? f.vz_acc_mps  : NAN, 3);
+   #endif
+    kv_f("vz_fused_mps",    agl_ready ? f.vz_fused_mps: NAN, 3);
+    kv_f("az_imu1_mps2",    f.az_imu1_mps2, 3);
+    kv_f("temp_C",          f.temp_c, 3);
+    kv_f("press_hPa",       f.press_hPa, 3);
+    kv_f("sos_mps",         f.sos_mps, 3);
+    kv_f("sos_min_mps",     f.sos_min_mps, 3);
+    kv_f("mach_vz",         f.mach_vz, 4);
+    kv_f("tilt_az_deg360",  f.tilt_az_deg360, 2);
+    kv_f("t_apogee_s",      f.t_apogee_s, 3);
+    kv_f("apogee_agl_m",    f.apogee_agl_m, 2);
+  #endif // MON_PROFILE_FULL
+    // Core minimal set
+    kv_f("tilt_deg",        f.tilt_deg, 2);
+    kv_f("mach_cons",       f.mach_cons, 4);
+    kv_f("cmd_deg",         (float)rec.ctl.airbrake_cmd_deg, 2);
+    kv_i("fc_state",        (int32_t)rec.sys.fc_state);
+    // Flags
+    {
+      uint32_t ff = rec.sys.fc_flags;
+      kv_i("tilt_ok",   (ff & svc::FCF_TILT_OK) ? 1 : 0);
+      kv_i("tilt_lock", (ff & svc::FCF_TILT_LATCH) ? 1 : 0);
+    }
+#endif // VIS_TILT_ONLY_MODE
     Serial.println();
-#endif
-
-#endif // SERIAL_DATA_ENABLE
+#endif // SERIAL_DATA_ENABLE && MON_UNIFIED_OUTPUT
 
     // Status/flags stream (considered DATA, not DEBUG): emits periodically
-#if SERIAL_DATA_ENABLE && !(defined(VIS_TILT_ONLY_MODE) && VIS_TILT_ONLY_MODE)
+#if SERIAL_DATA_ENABLE && MON_DEBUG_BLOCK && !(defined(VIS_TILT_ONLY_MODE) && VIS_TILT_ONLY_MODE)
     svc::FcStatus st; svc::fcGetStatus(st);
     auto state_name = [](uint8_t s)->const char*{
       switch (s) {
@@ -147,11 +128,11 @@ static void task_logger(void *param) {
     Serial.print(" t_to_apogee_s:"); Serial.print(st.t_to_apogee_s, 2);
     Serial.print(" t_since_launch_s:"); Serial.print(st.t_since_launch_s, 2);
     Serial.println();
-#else
+#else // MON_DEBUG_BLOCK
     // Single-line CSV debug
 #if defined(TELEPLOT_MODE) && TELEPLOT_MODE
     Serial.print(">:");
-#endif // SERIAL_DATA_ENABLE
+#endif // MON_DEBUG_BLOCK
     Serial.print("DBG,fc_state_str:"); Serial.print(state_name(st.state));
     Serial.print(",fc_state:"); Serial.print(st.state);
     Serial.print(",flags_hex:0x"); Serial.print(ff, HEX);

@@ -13,7 +13,7 @@
 
 // Teleplot output
 #ifndef TELEPLOT_MODE
-#define TELEPLOT_MODE 1         // 1 = Teleplot format enabled by default
+#define TELEPLOT_MODE 0         // default OFF; use unified key:value line format
 #endif
 #ifndef TELEPLOT_INCLUDE_TS
 #define TELEPLOT_INCLUDE_TS 0   // 1 = include millis() timestamp in Teleplot lines
@@ -61,4 +61,15 @@
 #endif
 #ifndef PLOT_INCLUDE_DIFF
 #define PLOT_INCLUDE_DIFF 1
+#endif
+
+// Unified monitor output profile and options
+#ifndef MON_UNIFIED_OUTPUT
+#define MON_UNIFIED_OUTPUT 1   // 1 = use unified one-line key:value output
+#endif
+#ifndef MON_PROFILE_FULL
+#define MON_PROFILE_FULL 0     // 1 = emit extended set of metrics
+#endif
+#ifndef MON_DEBUG_BLOCK
+#define MON_DEBUG_BLOCK 0      // 1 = emit additional human-readable debug after data line
 #endif

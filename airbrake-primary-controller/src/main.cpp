@@ -1,12 +1,12 @@
 // ===== Main Application =====
 // Brief: Initializes board, buses, and starts all tasks.
 // Refs: docs/architecture.md
-//* -- Includes --
+//* ===== Includes =====
 // Core
 #include <Arduino.h>
 #include <UMS3.h>
 
-//* -- App Includes --
+
 // App modules
 #include "app_config.h"
 #include "logging.h"
@@ -24,16 +24,15 @@
 #include <SPI.h>
 #include <SD.h>
 #endif
-//
+//* ====================
 
-// Note: telemetryStartTasks() declared in telemetry.h
 
-//* -- Globals --
+//* ===== Globals =====
 // Note: Define the board object here so tasks can use it via board.h extern
 UMS3 ums3;
-//
+//* ===================
 
-//* -- Setup --
+//* ===== Setup =====
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
@@ -51,6 +50,7 @@ void setup() {
   ums3.setPixelPower(true);
   delay(50);
 
+  // Desk Mode Alert
 #if defined(DESK_MODE) && DESK_MODE
   DEBUGLN("Desk Mode: ON (scaled thresholds, reduced durations)");
 #endif
