@@ -31,4 +31,7 @@ inline void bus_setup() {
 
 /** @brief Scan the I2C bus and print discovered addresses (debug-friendly). */
 void bus_scan_i2c();
+
+/** @brief Probe SD wiring on SPI and print diagnostics. */
+void bus_probe_sd();
 // !SECTION
