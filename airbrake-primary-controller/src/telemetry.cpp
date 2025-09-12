@@ -15,6 +15,7 @@
 #include "sensor_imu2.h"
 #include "logging.h"
 #include "services/fc.h"
+#include "services/fusion.h"
 // Buses (SPI/I2C mutexes and pin map)
 #include "bus.h"
 // !SECTION
@@ -118,6 +119,26 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
   rec.sys.cpu_temp_c = 0.0f;
 
   rec.ctl.airbrake_actual_deg = 0.0f;
+  // Fused/derived values snapshot
+  {
+    svc::FusedAlt f;
+    if (svc::fusionGetAlt(f))
+    {
+      rec.fused.stamp_ms = rec.hdr.timestamp_ms;
+      rec.fused.agl_fused_m = f.agl_fused_m;
+      rec.fused.agl_bmp1_m = f.agl_bmp1_m;
+      rec.fused.agl_imu1_m = f.agl_imu1_m;
+      rec.fused.t_apogee_s = f.t_apogee_s;
+      rec.fused.apogee_agl_m = f.apogee_agl_m;
+      rec.fused.vz_mps = f.vz_mps;
+      rec.fused.vz_acc_mps = f.vz_acc_mps;
+      rec.fused.vz_fused_mps = f.vz_fused_mps;
+      rec.fused.az_imu1_mps2 = f.az_imu1_mps2;
+      rec.fused.tilt_deg = f.tilt_deg;
+      rec.fused.tilt_az_deg360 = f.tilt_az_deg360;
+      rec.fused.mach_cons = f.mach_cons;
+    }
+  }
 
 #if LOG_INCLUDE_CRC
   rec.crc32 = crc32_update(0, reinterpret_cast<const uint8_t *>(&rec), sizeof(rec) - sizeof(rec.crc32));

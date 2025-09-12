@@ -10,7 +10,7 @@
 #include "app_config.h"
 #include "board.h"
 #include "services/fc.h"
-#include "services/fusion.h"
+#include "telemetry.h"
 #include "task_led.h"
 
 static volatile uint8_t s_led_mode = LED_MODE_DEFAULT;
@@ -85,8 +85,10 @@ static void task_led(void *param)
     // Gather status snapshots
     svc::FcStatus st;
     bool have_fc = svc::fcGetStatus(st);
-    svc::FusedAlt f;
-    bool have_fused = svc::fusionGetAlt(f);
+    TelemetryRecord rec;
+    telemetryGetLatest(rec);
+    const auto &fu = rec.fused;
+    bool have_fused = !isnan(fu.tilt_deg) || !isnan(fu.vz_fused_mps);
 
     // Determine phases/faults
     bool sensors_ok = false;
@@ -100,10 +102,7 @@ static void task_led(void *param)
       sensors_ok = (ff & svc::FCF_SENS_IMU1_OK) && (ff & svc::FCF_SENS_BMP1_OK);
       fault = !sensors_ok; // treat missing required sensors as boot fault
     }
-    if (have_fused)
-    {
-      agl_ready = f.agl_ready;
-    }
+    agl_ready = have_fused;
 
     uint32_t now = millis();
     if ((now - last_blink_ms) >= blink_period_ms)
@@ -165,8 +164,8 @@ static void task_led(void *param)
     case LED_MODE_TILT:
     {
       // Map tilt azimuth to hue, tilt magnitude to brightness
-      float hue = have_fused && !isnan(f.tilt_az_deg360) ? f.tilt_az_deg360 : 0.0f;
-      float mag = have_fused && !isnan(f.tilt_deg) ? f.tilt_deg : 0.0f; // 0..180 deg
+      float hue = have_fused && !isnan(fu.tilt_az_deg360) ? fu.tilt_az_deg360 : 0.0f;
+      float mag = have_fused && !isnan(fu.tilt_deg) ? fu.tilt_deg : 0.0f; // 0..180 deg
       float v = fminf(1.0f, mag / 30.0f);                               // saturate at 30 deg
       float s = sensors_ok ? 1.0f : 0.2f;
       color = colorFromHSV(hue, s, v);

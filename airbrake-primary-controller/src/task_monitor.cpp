@@ -14,7 +14,6 @@
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "telemetry.h"
-#include "services/fusion.h"
 #include "services/fc.h"
 // !SECTION
 
@@ -29,9 +28,7 @@ static void task_monitor(void *param)
 #if SERIAL_DATA_ENABLE
     TelemetryRecord rec;
     telemetryGetLatest(rec);
-    svc::FusedAlt f;
-    svc::fusionGetAlt(f);
-    bool agl_ready = f.agl_ready;
+    const auto &fu = rec.fused;
 
     // Mode 0: Visualizer (key:value)
 #if (MON_MODE == 0)
@@ -46,8 +43,8 @@ static void task_monitor(void *param)
     };
     if (MON_INCLUDE_TS) { Serial.print("ts:"); Serial.print((uint32_t)millis()); }
     // Core fused values used by FC decisions
-    kv_f("tilt_deg", f.tilt_deg, 2);
-    kv_f("mach_cons", f.mach_cons, 4);
+    kv_f("tilt_deg", fu.tilt_deg, 2);
+    kv_f("mach_cons", fu.mach_cons, 4);
     kv_f("cmd_deg", (float)rec.ctl.airbrake_cmd_deg, 2);
     kv_i("fc_state", (int32_t)rec.sys.fc_state);
     kv_i("fc_flags", (int32_t)rec.sys.fc_flags);
@@ -58,17 +55,14 @@ static void task_monitor(void *param)
     }
     // Optional fusion sub-values for verification
 #if MON_SHOW_FUSION_PARTS
-    kv_f("agl_fused_m", agl_ready ? f.agl_fused_m : NAN, 3);
-    kv_f("agl_bmp1_m", agl_ready ? f.agl_bmp1_m : NAN, 3);
-    kv_f("agl_imu1_m", agl_ready ? f.agl_imu1_m : NAN, 3);
-    kv_f("vz_fused_mps", agl_ready ? f.vz_fused_mps : NAN, 3);
-    kv_f("vz_baro_mps", agl_ready ? f.vz_mps : NAN, 3);
+    kv_f("agl_fused_m", fu.agl_fused_m, 3);
+    kv_f("agl_bmp1_m", fu.agl_bmp1_m, 3);
+    kv_f("agl_imu1_m", fu.agl_imu1_m, 3);
+    kv_f("vz_fused_mps", fu.vz_fused_mps, 3);
+    kv_f("vz_baro_mps", fu.vz_mps, 3);
 #if FUSION_USE_ACC_INT
-    kv_f("vz_acc_mps", agl_ready ? f.vz_acc_mps : NAN, 3);
+    kv_f("vz_acc_mps", fu.vz_acc_mps, 3);
 #endif
-    kv_f("temp_C", f.temp_c, 2);
-    kv_f("press_hPa", f.press_hPa, 1);
-    kv_f("sos_min_mps", f.sos_min_mps, 2);
 #endif // MON_SHOW_FUSION_PARTS
     Serial.println();
 #elif (MON_MODE == 1)
@@ -98,10 +92,10 @@ static void task_monitor(void *param)
     Serial.printf("%-10s ", state_name(rec.sys.fc_state));
     Serial.printf("M:%d T:%d L:%d ", mach_ok, tilt_ok, tilt_lock);
     Serial.printf("cmd:%+05.1f ", (float)rec.ctl.airbrake_cmd_deg);
-    Serial.printf("tilt:%+06.2f ", f.tilt_deg);
-    Serial.printf("mach:%0.3f ", f.mach_cons);
-    Serial.printf("vz:%+07.2f ", f.vz_fused_mps);
-    Serial.printf("agl:%+07.2f", f.agl_fused_m);
+    Serial.printf("tilt:%+06.2f ", fu.tilt_deg);
+    Serial.printf("mach:%0.3f ", fu.mach_cons);
+    Serial.printf("vz:%+07.2f ", fu.vz_fused_mps);
+    Serial.printf("agl:%+07.2f", fu.agl_fused_m);
     Serial.println();
 #endif // MON_MODE
 #endif // SERIAL_DATA_ENABLE

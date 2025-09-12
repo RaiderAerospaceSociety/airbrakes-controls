@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define TELEM_VERSION 2
+#define TELEM_VERSION 3
 // TODO(telemetry, versioning): Bump TELEM_VERSION when field layout changes.
 // Checklist for bumps:
 //  - Update docs/telemetry.md and docs/signals.md
@@ -87,6 +87,28 @@ struct TelemetryControl
   float airbrake_actual_deg; ///< Measured angle (deg)
 };
 
+/** @brief Fused/derived values snapshot (subset needed by consumers). */
+struct TelemetryFused
+{
+  // Timing mirrors header timestamp; included for convenience if copied alone
+  uint32_t stamp_ms;      ///< Snapshot time (millis)
+  // AGL and predictors
+  float agl_fused_m;      ///< Fused AGL (m)
+  float agl_bmp1_m;       ///< AGL from BMP1 (m)
+  float agl_imu1_m;       ///< AGL from IMU1 internal baro (m)
+  float t_apogee_s;       ///< Biased-early time to apogee (s)
+  float apogee_agl_m;     ///< Biased-low predicted apogee AGL (m)
+  // Kinematics
+  float vz_mps;           ///< Vertical speed from AGL derivative (m/s)
+  float vz_acc_mps;       ///< Vertical speed from accel integration (m/s)
+  float vz_fused_mps;     ///< Fused vertical speed (m/s)
+  float az_imu1_mps2;     ///< Vertical acceleration from IMU1 (m/s^2)
+  // Attitude and gating
+  float tilt_deg;         ///< Tilt angle (deg)
+  float tilt_az_deg360;   ///< Tilt azimuth mapped to [0,360) deg
+  float mach_cons;        ///< Conservative Mach proxy (unitless)
+};
+
 /** @brief Full telemetry record (packed). */
 struct TelemetryRecord
 {
@@ -96,6 +118,7 @@ struct TelemetryRecord
   TelemetryImu2 imu2;
   TelemetrySystem sys;
   TelemetryControl ctl;
+  TelemetryFused fused;
   uint32_t crc32; // optional; 0 if disabled
 };
 #pragma pack(pop)

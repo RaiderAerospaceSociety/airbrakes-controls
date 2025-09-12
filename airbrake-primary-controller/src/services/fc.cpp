@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include "services/fc.h"
-#include "services/fusion.h"
+#include "telemetry.h"
 #include "sensor_bmp1.h"
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
@@ -43,7 +43,7 @@ namespace svc
   static inline float now_s(uint32_t now_ms) { return now_ms * 0.001f; }
   static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-  static void fc_update_flags(const svc::FusedAlt &f, uint32_t dt_ms)
+  static void fc_update_flags(const TelemetryFused &f, uint32_t dt_ms)
   {
     // Sensor validity
     bmp_reading_t b;
@@ -170,7 +170,7 @@ namespace svc
       xSemaphoreGive(s_mutex);
   }
 
-  static void fc_update_fsm(const svc::FusedAlt &f, uint32_t now_ms, uint32_t dt_ms)
+  static void fc_update_fsm(const TelemetryFused &f, uint32_t now_ms, uint32_t dt_ms)
   {
     // Liftoff detection
     bool liftoff_cond = false;
@@ -368,8 +368,9 @@ namespace svc
       s_mutex = xSemaphoreCreateMutex();
     for (;;)
     {
-      FusedAlt f;
-      svc::fusionGetAlt(f);
+      TelemetryRecord rec;
+      telemetryGetLatest(rec);
+      const TelemetryFused &f = rec.fused;
       uint32_t now = millis();
       uint32_t dt = now - prev_ms;
       if (dt > 1000)
