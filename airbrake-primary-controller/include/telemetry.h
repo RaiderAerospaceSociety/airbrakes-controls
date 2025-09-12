@@ -3,12 +3,7 @@
 
 #include <stdint.h>
 
-#define TELEM_VERSION 3
-// TODO(telemetry, versioning): Bump TELEM_VERSION when field layout changes.
-// Checklist for bumps:
-//  - Update docs/telemetry.md and docs/signals.md
-//  - Note changes in commit message and PR description
-//  - Coordinate consumers (downstream tools/parsers)
+// Note: Versioning is kept out of the runtime snapshot; handle in log headers if needed.
 
 /** @brief Section presence bitmask (reserved for future dynamic enabling). */
 enum TelemetryPresent : uint32_t
@@ -28,10 +23,10 @@ enum TelemetryPresent : uint32_t
 /** @brief Telemetry header (fixed layout). */
 struct TelemetryHeader
 {
-  uint8_t magic0;         ///< 0xAB
-  uint8_t magic1;         ///< 0xCD
-  uint8_t version;        ///< TELEM_VERSION
-  uint8_t packet_type;    ///< 0 = full record
+  uint8_t  magic0;        ///< 0xAB
+  uint8_t  magic1;        ///< 0xCD
+  uint8_t  packet_type;   ///< 0 = full record
+  uint8_t  _pad0;         ///< reserved
   uint32_t seq;           ///< Monotonically increasing sequence
   uint32_t timestamp_ms;  ///< millis()
   uint32_t present_flags; ///< TP_* bitmask
@@ -40,20 +35,33 @@ struct TelemetryHeader
 /** @brief Telemetry section for BMP390. */
 struct TelemetryBmp1
 {
-  float temperature_c; ///< Temperature (C)
-  float pressure_pa;   ///< Pressure (Pa)
-  float altitude_m;    ///< Altitude (m)
-  uint8_t status;      ///< Bitfield (0 = ok)
-  uint8_t _pad[3];
+  float   temperature_c; ///< Temperature (C)
+  float   pressure_pa;   ///< Pressure (Pa)
+  float   altitude_m;    ///< Altitude (m)
+  uint8_t status;        ///< 0 = ok; nonzero = error
+  uint8_t ok;            ///< convenience boolean (status == 0)
+  uint8_t _pad[2];
 };
 
 /** @brief Telemetry section for IMU1 (USFSMAX). */
 struct TelemetryImu1
 {
+  // Health
+  uint8_t status;   ///< 0 = ok; nonzero = error
+  uint8_t ok;       ///< convenience boolean (status == 0)
+  uint8_t cal_status; ///< library calibration indicator (0 if unknown)
+  uint8_t _pad0;
+  // Orientation
   float quat[4];      ///< Quaternion w,x,y,z
-  uint8_t cal_status; ///< 0 if unknown
-  uint8_t _pad[3];
-  float dhi_rsq; ///< 0.0 if unused
+  float euler_deg[3]; ///< Yaw,Pitch,Roll (deg)
+  // Kinematics
+  float accel_g[3];   ///< Accel (g)
+  float gyro_dps[3];  ///< Gyro (deg/s)
+  float mag_uT[3];    ///< Magnetometer (uT)
+  // Baro (internal)
+  float baro_alt_m;   ///< Internal baro altitude (m)
+  // Cal/diagnostic
+  float dhi_rsq;      ///< Hard‑iron fit quality
 };
 // Backward-compat alias
 using TelemetryUsfsmax = TelemetryImu1;
@@ -61,23 +69,37 @@ using TelemetryUsfsmax = TelemetryImu1;
 /** @brief Telemetry section for IMU2 (MPU6050). */
 struct TelemetryImu2
 {
-  float accel_g[3];  ///< Accel (g)
-  float gyro_dps[3]; ///< Gyro (deg/s)
-  float temp_c;      ///< Temperature (C)
-  uint8_t status;    ///< 0 if ok
-  uint8_t _pad[3];
+  float   accel_g[3];  ///< Accel (g)
+  float   gyro_dps[3]; ///< Gyro (deg/s)
+  float   temp_c;      ///< Temperature (C)
+  uint8_t status;      ///< 0 = ok
+  uint8_t ok;          ///< convenience boolean (status == 0)
+  uint8_t _pad[2];
 };
 
 /** @brief System status metrics. */
 struct TelemetrySystem
 {
-  uint16_t vbat_mv;  ///< Battery voltage (mV)
-  uint16_t i2c_errs; ///< I2C error counter
-  uint16_t spi_errs; ///< SPI error counter
-  uint8_t fc_state;  ///< Airbrake FSM state
-  uint8_t _pad0;
-  float cpu_temp_c;  ///< CPU temperature (C)
-  uint32_t fc_flags; ///< Controller flags (bitmask)
+  uint16_t vbat_mv;   ///< Battery voltage (mV)
+  uint16_t i2c_errs;  ///< I2C error counter
+  uint16_t spi_errs;  ///< SPI error counter
+  uint8_t  fc_state;  ///< Airbrake FSM state
+  uint8_t  _pad0;
+  uint32_t fc_flags;  ///< Controller flags (bitmask)
+  // FC flags as explicit booleans (status lights)
+  uint8_t  sens_imu1_ok;
+  uint8_t  sens_bmp1_ok;
+  uint8_t  sens_imu2_ok;
+  uint8_t  baro_agree;
+  uint8_t  mach_ok;
+  uint8_t  tilt_ok;
+  uint8_t  tilt_latch;
+  uint8_t  liftoff_det;
+  uint8_t  burnout_det;
+  uint8_t  _pad1[3];
+  // FC timing
+  float    fc_t_since_launch_s;
+  float    fc_t_to_apogee_s;
 };
 
 /** @brief Control surfaces / actuator telemetry. */
@@ -92,6 +114,8 @@ struct TelemetryFused
 {
   // Timing mirrors header timestamp; included for convenience if copied alone
   uint32_t stamp_ms;      ///< Snapshot time (millis)
+  uint8_t  agl_ready;     ///< 1 when baseline captured and fused outputs valid
+  uint8_t  _padf[3];
   // AGL and predictors
   float agl_fused_m;      ///< Fused AGL (m)
   float agl_bmp1_m;       ///< AGL from BMP1 (m)

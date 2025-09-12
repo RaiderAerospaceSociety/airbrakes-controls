@@ -18,6 +18,8 @@
 #include "services/fusion.h"
 // Buses (SPI/I2C mutexes and pin map)
 #include "bus.h"
+#include "board.h"
+#include <USFSMAX.h>
 // !SECTION
 
 #if LOG_BINARY_ON_SD
@@ -59,7 +61,6 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
   memset(&rec, 0, sizeof(rec));
   rec.hdr.magic0 = 0xAB;
   rec.hdr.magic1 = 0xCD;
-  rec.hdr.version = TELEM_VERSION;
   rec.hdr.packet_type = 0;
   rec.hdr.seq = seq;
   rec.hdr.timestamp_ms = millis();
@@ -68,21 +69,67 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
   bmp_reading_t bmp;
   if (bmp1Get(bmp) && bmp.valid)
   {
-    rec.bmp390.temperature_c = bmp.temperature_c;
-    rec.bmp390.pressure_pa = bmp.pressure_pa;
-    rec.bmp390.altitude_m = bmp.altitude_m;
+    rec.bmp390.temperature_c = (float)bmp.temperature_c;
+    rec.bmp390.pressure_pa = (float)bmp.pressure_pa;
+    rec.bmp390.altitude_m = (float)bmp.altitude_m;
     rec.bmp390.status = 0;
+    rec.bmp390.ok = 1;
+  }
+  else
+  {
+    rec.bmp390.status = 1;
+    rec.bmp390.ok = 0;
   }
 
   imu1_reading_t u1;
   if (imu1Get(u1) && u1.valid)
   {
+    rec.imu1.status = 0; rec.imu1.ok = 1;
     rec.imu1.quat[0] = u1.quat[0];
     rec.imu1.quat[1] = u1.quat[1];
     rec.imu1.quat[2] = u1.quat[2];
     rec.imu1.quat[3] = u1.quat[3];
+    // Euler from quaternion
+    auto quat_to_euler = [](float w, float x, float y, float z, float &yaw, float &pitch, float &roll)
+    {
+      yaw = atan2f(2.0f * (x * y + w * z), 1.0f - 2.0f * (y * y + z * z)) * 57.2957795f;
+      pitch = asinf(2.0f * (w * y - z * x)) * 57.2957795f;
+      roll = atan2f(2.0f * (w * x + y * z), 1.0f - 2.0f * (x * x + y * y)) * 57.2957795f;
+    };
+    quat_to_euler(u1.quat[0], u1.quat[1], u1.quat[2], u1.quat[3], rec.imu1.euler_deg[0], rec.imu1.euler_deg[1], rec.imu1.euler_deg[2]);
+    rec.imu1.accel_g[0] = u1.accel_g[0];
+    rec.imu1.accel_g[1] = u1.accel_g[1];
+    rec.imu1.accel_g[2] = u1.accel_g[2];
+    // Latest raw ADC samples (from USFSMAX globals)
+    extern int16_t gyroADC[2][3];
+    extern int16_t magADC[2][3];
+    extern float UT_per_Count;
+#if defined(GYRO_SCALE_2000)
+    const float GYRO_DPS_PER_COUNT = 0.07f;
+#elif defined(GYRO_SCALE_1000)
+    const float GYRO_DPS_PER_COUNT = 0.035f;
+#elif defined(GYRO_SCALE_500)
+    const float GYRO_DPS_PER_COUNT = 0.0175f;
+#elif defined(GYRO_SCALE_250)
+    const float GYRO_DPS_PER_COUNT = 0.00875f;
+#elif defined(GYRO_SCALE_125)
+    const float GYRO_DPS_PER_COUNT = 0.004375f;
+#else
+    const float GYRO_DPS_PER_COUNT = 0.07f;
+#endif
+    rec.imu1.gyro_dps[0] = gyroADC[0][0] * GYRO_DPS_PER_COUNT;
+    rec.imu1.gyro_dps[1] = gyroADC[0][1] * GYRO_DPS_PER_COUNT;
+    rec.imu1.gyro_dps[2] = gyroADC[0][2] * GYRO_DPS_PER_COUNT;
+    rec.imu1.mag_uT[0] = magADC[0][0] * UT_per_Count;
+    rec.imu1.mag_uT[1] = magADC[0][1] * UT_per_Count;
+    rec.imu1.mag_uT[2] = magADC[0][2] * UT_per_Count;
+    rec.imu1.baro_alt_m = u1.altitude_m;
     rec.imu1.cal_status = 0;
     rec.imu1.dhi_rsq = 0.0f;
+  }
+  else
+  {
+    rec.imu1.status = 1; rec.imu1.ok = 0;
   }
 
   imu2_reading_t u2;
@@ -96,9 +143,16 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
     rec.imu2.gyro_dps[2] = u2.gyro_dps[2];
     rec.imu2.temp_c = u2.temp_c;
     rec.imu2.status = 0;
+    rec.imu2.ok = 1;
+  }
+  else
+  {
+    rec.imu2.status = 1;
+    rec.imu2.ok = 0;
   }
 
-  rec.sys.vbat_mv = 0; // TODO: wire ADC later
+  // System and FC flags
+  rec.sys.vbat_mv = (uint16_t)(ums3.getBatteryVoltage() * 1000.0f);
   rec.sys.i2c_errs = 0;
   rec.sys.spi_errs = 0;
   {
@@ -107,16 +161,21 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
     {
       rec.sys.fc_state = st.state;
       rec.sys.fc_flags = st.flags;
-      rec.ctl.airbrake_cmd_deg = st.airbrake_cmd_deg;
-    }
-    else
-    {
-      rec.sys.fc_state = 0;
-      rec.sys.fc_flags = 0;
-      rec.ctl.airbrake_cmd_deg = 0.0f;
+      uint32_t ff = st.flags;
+      rec.sys.sens_imu1_ok = (ff & svc::FCF_SENS_IMU1_OK) ? 1 : 0;
+      rec.sys.sens_bmp1_ok = (ff & svc::FCF_SENS_BMP1_OK) ? 1 : 0;
+      rec.sys.sens_imu2_ok = (ff & svc::FCF_SENS_IMU2_OK) ? 1 : 0;
+      rec.sys.baro_agree   = (ff & svc::FCF_BARO_AGREE) ? 1 : 0;
+      rec.sys.mach_ok      = (ff & svc::FCF_MACH_OK) ? 1 : 0;
+      rec.sys.tilt_ok      = (ff & svc::FCF_TILT_OK) ? 1 : 0;
+      rec.sys.tilt_latch   = (ff & svc::FCF_TILT_LATCH) ? 1 : 0;
+      rec.sys.liftoff_det  = (ff & svc::FCF_LIFTOFF_DET) ? 1 : 0;
+      rec.sys.burnout_det  = (ff & svc::FCF_BURNOUT_DET) ? 1 : 0;
+      rec.sys.fc_t_since_launch_s = st.t_since_launch_s;
+      rec.sys.fc_t_to_apogee_s    = st.t_to_apogee_s;
+      rec.ctl.airbrake_cmd_deg    = st.airbrake_cmd_deg;
     }
   }
-  rec.sys.cpu_temp_c = 0.0f;
 
   rec.ctl.airbrake_actual_deg = 0.0f;
   // Fused/derived values snapshot
@@ -125,6 +184,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
     if (svc::fusionGetAlt(f))
     {
       rec.fused.stamp_ms = rec.hdr.timestamp_ms;
+      rec.fused.agl_ready = f.agl_ready ? 1 : 0;
       rec.fused.agl_fused_m = f.agl_fused_m;
       rec.fused.agl_bmp1_m = f.agl_bmp1_m;
       rec.fused.agl_imu1_m = f.agl_imu1_m;

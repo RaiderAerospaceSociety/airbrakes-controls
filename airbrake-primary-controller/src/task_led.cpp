@@ -88,7 +88,7 @@ static void task_led(void *param)
     TelemetryRecord rec;
     telemetryGetLatest(rec);
     const auto &fu = rec.fused;
-    bool have_fused = !isnan(fu.tilt_deg) || !isnan(fu.vz_fused_mps);
+    bool have_fused = true; // fused snapshot present in telemetry
 
     // Determine phases/faults
     bool sensors_ok = false;
@@ -102,7 +102,7 @@ static void task_led(void *param)
       sensors_ok = (ff & svc::FCF_SENS_IMU1_OK) && (ff & svc::FCF_SENS_BMP1_OK);
       fault = !sensors_ok; // treat missing required sensors as boot fault
     }
-    agl_ready = have_fused;
+    agl_ready = fu.agl_ready;
 
     uint32_t now = millis();
     if ((now - last_blink_ms) >= blink_period_ms)
@@ -164,8 +164,8 @@ static void task_led(void *param)
     case LED_MODE_TILT:
     {
       // Map tilt azimuth to hue, tilt magnitude to brightness
-      float hue = have_fused && !isnan(fu.tilt_az_deg360) ? fu.tilt_az_deg360 : 0.0f;
-      float mag = have_fused && !isnan(fu.tilt_deg) ? fu.tilt_deg : 0.0f; // 0..180 deg
+      float hue = fu.tilt_az_deg360;
+      float mag = fu.tilt_deg; // 0..180 deg
       float v = fminf(1.0f, mag / 30.0f);                               // saturate at 30 deg
       float s = sensors_ok ? 1.0f : 0.2f;
       color = colorFromHSV(hue, s, v);
