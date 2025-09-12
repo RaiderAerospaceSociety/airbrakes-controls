@@ -41,18 +41,62 @@ static void task_monitor(void *param)
     {
       Serial.print(", "); Serial.print(key); Serial.print(":"); Serial.print(val);
     };
-    if (MON_INCLUDE_TS) { Serial.print("ts:"); Serial.print((uint32_t)millis()); }
-    // Core fused values used by FC decisions
-    kv_f("tilt_deg", fu.tilt_deg, 2);
-    kv_f("mach_cons", fu.mach_cons, 4);
-    kv_f("cmd_deg", (float)rec.ctl.airbrake_cmd_deg, 2);
+    auto kv_s = [](const char *key, const char *s)
+    {
+      Serial.print(", "); Serial.print(key); Serial.print(":"); Serial.print(s);
+    };
+    if (MON_INCLUDE_TS) { Serial.print("ts_ms:"); Serial.print((uint32_t)millis()); }
+    // Battery (1S Li‑ion 3.0..4.2V typical scale)
+    kv_f("vbat_v", rec.sys.vbat_mv / 1000.0f, 3);
+    // Bus error counters
+    kv_i("i2c_errs", rec.sys.i2c_errs);
+    kv_i("spi_errs", rec.sys.spi_errs);
+    // FC state (string + code)
+    auto state_name = [](uint8_t s) -> const char *
+    {
+      switch (s) {
+        case svc::FC_SAFE: return "SAFE";
+        case svc::FC_PREFLIGHT: return "PREFLIGHT";
+        case svc::FC_ARMED_WAIT: return "ARMED_WAIT";
+        case svc::FC_BOOST: return "BOOST";
+        case svc::FC_POST_BURN_HOLD: return "POST_HOLD";
+        case svc::FC_WINDOW: return "WINDOW";
+        case svc::FC_DEPLOYED: return "DEPLOYED";
+        case svc::FC_RETRACTING: return "RETRACT";
+        case svc::FC_LOCKED: return "LOCKED";
+        case svc::FC_ABORT_LOCKOUT: return "ABORT_LOCKOUT";
+        default: return "UNKNOWN";
+      }
+    };
+    kv_s("fc_state_str", state_name(rec.sys.fc_state));
     kv_i("fc_state", (int32_t)rec.sys.fc_state);
     kv_i("fc_flags", (int32_t)rec.sys.fc_flags);
-    {
-      uint32_t ff = rec.sys.fc_flags;
-      kv_i("tilt_ok", (ff & svc::FCF_TILT_OK) ? 1 : 0);
-      kv_i("tilt_lock", (ff & svc::FCF_TILT_LATCH) ? 1 : 0);
-    }
+    // Status lights (booleans)
+    kv_i("sens_imu1_ok", rec.sys.sens_imu1_ok);
+    kv_i("sens_bmp1_ok", rec.sys.sens_bmp1_ok);
+    kv_i("sens_imu2_ok", rec.sys.sens_imu2_ok);
+    kv_i("baro_agree", rec.sys.baro_agree);
+    kv_i("mach_ok", rec.sys.mach_ok);
+    kv_i("tilt_ok", rec.sys.tilt_ok);
+    kv_i("tilt_latch", rec.sys.tilt_latch);
+    kv_i("liftoff_det", rec.sys.liftoff_det);
+    kv_i("burnout_det", rec.sys.burnout_det);
+    kv_i("lockout", rec.sys.fc_state == svc::FC_ABORT_LOCKOUT ? 1 : 0);
+    // Times (s)
+    kv_f("t_since_launch_s", rec.sys.fc_t_since_launch_s, 2);
+    kv_f("t_to_apogee_s", rec.sys.fc_t_to_apogee_s, 2);
+    // Airbrake cmd/actual
+    kv_f("cmd_deg", (float)rec.ctl.airbrake_cmd_deg, 2);
+    kv_f("act_deg", (float)rec.ctl.airbrake_actual_deg, 2);
+    // Fused core for graphs/gauges
+    kv_i("agl_ready", fu.agl_ready);
+    kv_f("temp_c", fu.temp_c, 2);
+    kv_f("agl_fused_m", fu.agl_fused_m, 3);
+    kv_f("vz_fused_mps", fu.vz_fused_mps, 3);
+    kv_f("az_imu1_mps2", fu.az_imu1_mps2, 3);
+    kv_f("tilt_deg", fu.tilt_deg, 2);
+    kv_f("tilt_az_deg360", fu.tilt_az_deg360, 1);
+    kv_f("mach_cons", fu.mach_cons, 4);
     // Optional fusion sub-values for verification
 #if MON_SHOW_FUSION_PARTS
     kv_f("agl_fused_m", fu.agl_fused_m, 3);

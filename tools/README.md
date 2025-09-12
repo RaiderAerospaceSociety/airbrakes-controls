@@ -1,21 +1,16 @@
 # Tools
 
-## Tilt Visualizer
+## Flight Visualizer
 
-A minimal Python GUI for viewing the rocket's tilt angle in real time, with an optional collapsible raw serial monitor pane.
+A Python dashboard for viewing key flight telemetry in real time: gauges (battery, airbrakes), status lights (sensor OKs, events), digital clocks (time alive/since liftoff/to apogee), graphs (AGL, vertical velocity, acceleration), compass for azimuth + tilt, and a collapsible raw serial monitor pane.
 
 ### Serial data format
 
-The flight computer should emit newline-terminated ASCII lines like:
+The flight computer should emit newline-terminated ASCII lines containing comma-separated `key:value` pairs, e.g.:
 
 ```
-tilt_deg:<angle>
-```
-
-Where `<angle>` is a floating-point number (0–180) giving the tilt degrees off vertical. Example firmware code:
-
-```
-printf("tilt_deg:%0.2f\n", tilt_deg);
+ts_ms:40364, vbat_v:4.119, i2c_errs:0, spi_errs:0, fc_state_str:LOCKED, tilt_deg:1.14, tilt_az_deg360:90,
+agl_fused_m:0.205, vz_fused_mps:0.093, az_imu1_mps2:0.106, cmd_deg:0.00, act_deg:0.00, agl_ready:1, ...
 ```
 
 ### Usage
@@ -26,7 +21,7 @@ printf("tilt_deg:%0.2f\n", tilt_deg);
    ```
 2. Run the visualizer:
    ```bash
-   python tools/tilt_visualizer.py --port COM3  # or /dev/tty.usbmodemXXXX
+   python tools/flight_visualizer.py --port COM3  # or /dev/tty.usbmodemXXXX
    ```
    Replace `COM3` with the serial port used by your microcontroller.
 
@@ -34,6 +29,8 @@ Extras
 - Start with the raw serial monitor expanded: `--show-raw`
 - Keep more/less raw lines: `--raw-buffer 500`
 - Also tee raw lines to stdout: `--print-raw`
+
+Note: the previous `tools/tilt_visualizer.py` now forwards to `flight_visualizer.py`.
 
 ## Simple Serial Monitor
 

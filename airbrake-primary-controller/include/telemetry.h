@@ -131,6 +131,7 @@ struct TelemetryFused
   float tilt_deg;         ///< Tilt angle (deg)
   float tilt_az_deg360;   ///< Tilt azimuth mapped to [0,360) deg
   float mach_cons;        ///< Conservative Mach proxy (unitless)
+  float temp_c;           ///< Temperature used for fusion (C)
 };
 
 /** @brief Full telemetry record (packed). */

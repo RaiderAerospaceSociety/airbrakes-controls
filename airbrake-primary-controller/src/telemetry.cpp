@@ -197,6 +197,7 @@ static void telemetry_build(TelemetryRecord &rec, uint32_t seq)
       rec.fused.tilt_deg = f.tilt_deg;
       rec.fused.tilt_az_deg360 = f.tilt_az_deg360;
       rec.fused.mach_cons = f.mach_cons;
+      rec.fused.temp_c = f.temp_c;
     }
   }
 
