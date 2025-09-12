@@ -14,7 +14,7 @@ Current modes
 Flight visualizer (tools)
 - A Python dashboard exists at `tools/flight_visualizer.py` to monitor real-time telemetry (battery, airbrakes, state, lights, graphs, compass).
 - It includes a collapsible Raw Serial Monitor to inspect all incoming lines:
-  - Launch with `--show-raw` to start expanded; press `r` to toggle while running.
+  - Launch with `--show-raw` to start expanded; press `p` to toggle while running.
   - Options: `--raw-buffer N` to control retained lines, `--print-raw` to also tee to stdout.
   - Example: `python tools/flight_visualizer.py --port /dev/tty.usbmodem1101 --show-raw`.
 
