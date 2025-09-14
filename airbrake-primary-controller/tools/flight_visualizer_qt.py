@@ -48,6 +48,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--show-raw", action="store_true", help="Start with raw monitor expanded")
     p.add_argument("--raw-buffer", type=int, default=400, help="Raw lines kept in monitor")
     p.add_argument("--print-raw", action="store_true", help="Also print raw lines to stdout")
+    p.add_argument("--screen-idx", type=int, help="Target screen index (see --list-screens)")
+    p.add_argument("--screen-name", type=str, help="Substring match for target screen name")
+    p.add_argument("--list-screens", action="store_true", help="List available screens and exit")
     return p.parse_args()
 
 
@@ -429,6 +432,7 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             pw.showGrid(x=True, y=True, alpha=0.3)
             pw.setTitle(name)
             pw.setLabel("left", name)
+            pw.enableAutoRange(x=False, y=True)
             if ymin is not None and ymax is not None:
                 pw.setYRange(ymin, ymax)
             curve = pw.plot([], [], pen=pg.mkPen(width=2))
@@ -465,6 +469,13 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         self.timer.setInterval(int(1000 / max(1, int(fps))))
         self.timer.timeout.connect(self._update_ui)
         self.timer.start()
+
+        # Throttle raw text updates to reduce UI overhead
+        self._raw_pending: List[str] = []
+        self._raw_flush_timer = QtCore.QTimer(self)
+        self._raw_flush_timer.setInterval(200)  # ms
+        self._raw_flush_timer.timeout.connect(self._flush_raw_box)
+        self._raw_flush_timer.start()
 
     # --------------------------- Input handling ---------------------------
     def keyPressEvent(self, e: QtGui.QKeyEvent) -> None:
@@ -561,7 +572,10 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
 
         self.raw_lines.append(line)
         if self.raw_visible:
-            self.raw_box.appendPlainText(line)
+            self._raw_pending.append(line)
+            # Prevent unbounded growth if serial is too fast
+            if len(self._raw_pending) > 200:
+                self._flush_raw_box()
 
     # ----------------------------- UI update ------------------------------
     def _get_float(self, v: object) -> Optional[float]:
@@ -629,8 +643,13 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
 
         # Timeseries
         for name, data in self.metric_data.items():
-            xx = ts if ts and len(ts) == len(data) else list(range(len(data)))
-            self.ts_curves[name].setData(xx, list(data))
+            # Use numpy arrays and enable downsampling/clip-to-view to keep fast
+            if ts and len(ts) == len(data):
+                xx = np.asarray(ts, dtype=float)
+            else:
+                xx = np.arange(len(data), dtype=float)
+            yy = np.asarray(list(data), dtype=float)
+            self.ts_curves[name].setData(xx, yy, autoDownsample=True, clipToView=True)
 
         self._frame += 1
         self._prev_ts_len = len(ts)
@@ -647,9 +666,29 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         except Exception:
             QtWidgets.QMessageBox.warning(self, "Serial", "Reload failed")
 
+    def _flush_raw_box(self) -> None:
+        if not self.raw_visible or not self._raw_pending:
+            return
+        try:
+            chunk = "\n".join(self._raw_pending)
+            self._raw_pending.clear()
+            self.raw_box.appendPlainText(chunk)
+        except Exception:
+            self._raw_pending.clear()
+
 
 def main() -> None:
     args = parse_args()
+
+    # If requested, list screens and exit early
+    if args.list_screens:
+        # Create a minimal app to query screens
+        app = QtWidgets.QApplication([])
+        scrs = QtGui.QGuiApplication.screens()
+        for i, s in enumerate(scrs):
+            g = s.geometry()
+            print(f"[{i}] {s.name()}  geom=({g.x()},{g.y()},{g.width()}x{g.height()})  primary={s is QtGui.QGuiApplication.primaryScreen()}")
+        return
 
     app = QtWidgets.QApplication([])
     # Dark-ish palette to match matplotlib version
@@ -662,6 +701,37 @@ def main() -> None:
 
     w = FlightVisualizerQt(args.port, args.baud, args.window, args.fps, args.show_raw, args.raw_buffer, args.print_raw)
     w.show()
+
+    # Place window on a specific screen, if requested
+    try:
+        target_screen = None
+        screens = QtGui.QGuiApplication.screens()
+        if getattr(args, 'screen_name', None):
+            name_lc = args.screen_name.lower()
+            for s in screens:
+                if name_lc in (s.name() or "").lower():
+                    target_screen = s
+                    break
+        if target_screen is None and getattr(args, 'screen_idx', None) is not None:
+            idx = int(args.screen_idx)
+            if 0 <= idx < len(screens):
+                target_screen = screens[idx]
+        if target_screen is not None:
+            # Ensure window is associated with the target screen
+            if w.windowHandle() is not None:
+                try:
+                    w.windowHandle().setScreen(target_screen)
+                except Exception:
+                    pass
+            # Center within the target screen
+            g = target_screen.geometry()
+            # Avoid oversizing relative to screen
+            new_w = min(w.width(), max(200, g.width() - 40))
+            new_h = min(w.height(), max(200, g.height() - 80))
+            w.resize(new_w, new_h)
+            w.move(g.x() + (g.width() - new_w) // 2, g.y() + (g.height() - new_h) // 2)
+    except Exception:
+        pass
     app.exec()
 
 
