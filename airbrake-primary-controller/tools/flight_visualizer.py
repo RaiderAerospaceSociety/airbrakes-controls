@@ -297,6 +297,7 @@ class FlightVisualizer:
         self.last: Dict[str, object] = {}
 
         # Flags
+        #SECTION - Flags to show
         self.flag_names = [
             "sens_imu1_ok",
             "sens_bmp1_ok",
@@ -311,14 +312,17 @@ class FlightVisualizer:
             "lockout",  # computed from state if not present
         ]
         self.flags: Dict[str, Optional[bool]] = {k: None for k in self.flag_names}
+        #!SECTION - Flags to show
 
         # Timeseries buffers
+        #SECTION - Metrics to plot
         self.ts_metrics = [
             ("agl_fused_m", None, None),
             ("vz_fused_mps", None, None),
             ("az_imu1_mps2", None, None),
         ]
         self.metric_data: Dict[str, Deque[float]] = {k: deque(maxlen=self.window) for k, _, _ in self.ts_metrics}
+        #!SECTION - Metrics to plot
 
         # Figure and layout
         self.fig = plt.figure(constrained_layout=True, figsize=(13, 9))
