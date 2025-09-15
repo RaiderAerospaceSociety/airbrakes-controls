@@ -27,7 +27,9 @@ from __future__ import annotations
 import argparse
 import math
 from collections import deque
+import time
 from typing import Deque, Dict, List, Optional
+import sys
 
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -45,12 +47,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--baud", type=int, default=115200, help="Serial baud rate")
     p.add_argument("--window", type=int, default=300, help="Timeseries window (samples)")
     p.add_argument("--fps", type=int, default=20, help="UI update rate (frames per second)")
+    p.add_argument("--plot-fps", type=int, default=15, help="Max plot update rate (frames per second)")
     p.add_argument("--show-raw", action="store_true", help="Start with raw monitor expanded")
     p.add_argument("--raw-buffer", type=int, default=400, help="Raw lines kept in monitor")
     p.add_argument("--print-raw", action="store_true", help="Also print raw lines to stdout")
     p.add_argument("--screen-idx", type=int, help="Target screen index (see --list-screens)")
     p.add_argument("--screen-name", type=str, help="Substring match for target screen name")
     p.add_argument("--list-screens", action="store_true", help="List available screens and exit")
+    p.add_argument("--fast", action="store_true", help="Favor performance (no AA, try OpenGL)")
+    p.add_argument("--high-quality", action="store_true", help="High quality rendering (AA on, no OpenGL)")
+    p.add_argument("--light", action="store_true", help="Light theme palette")
+    p.add_argument("--components", action="store_true", help="Show fused components for altitude and velocity")
     return p.parse_args()
 
 
@@ -287,11 +294,24 @@ class CompassWidget(QtWidgets.QWidget):
             x, y = cx + math.cos(ang) * radius * 1.08, cy + math.sin(ang) * radius * 1.08
             p.drawText(QtCore.QRectF(x - 10, y - 8, 20, 16), QtCore.Qt.AlignCenter, lab)
 
-        # Heading needle
+        # Tilt vector with length mapping and color map
         if self.azi is not None and not math.isnan(self.azi):
             ang = self._azi_to_math_rad(float(self.azi))
-            x1, y1 = cx + math.cos(ang) * radius, cy + math.sin(ang) * radius
-            p.setPen(QtGui.QPen(QtGui.QColor("#1f77b4"), 3))
+            # length scale: clamp at 90
+            tilt_val = 0.0 if (self.tilt is None or math.isnan(self.tilt)) else float(self.tilt)
+            clamped = max(0.0, min(tilt_val, 90.0))
+            length = (clamped / 90.0) * radius
+            # color: 0-30 green, 30-60 yellow, 60-90 red, >90 magenta
+            if tilt_val <= 30:
+                color = QtGui.QColor(44, 160, 44)  # green
+            elif tilt_val <= 60:
+                color = QtGui.QColor(255, 191, 0)  # yellow
+            elif tilt_val <= 90:
+                color = QtGui.QColor(214, 39, 40)  # red
+            else:
+                color = QtGui.QColor(198, 120, 221)  # magenta for >90
+            x1, y1 = cx + math.cos(ang) * length, cy + math.sin(ang) * length
+            p.setPen(QtGui.QPen(color, 3))
             p.drawLine(int(cx), int(cy), int(x1), int(y1))
 
         # Center text
@@ -299,6 +319,96 @@ class CompassWidget(QtWidgets.QWidget):
         tilt_txt = "--" if (self.tilt is None or math.isnan(self.tilt)) else f"{self.tilt:.2f}°"
         p.drawText(QtCore.QRectF(0, cy - 10, rect.width(), 20), QtCore.Qt.AlignCenter, f"tilt: {tilt_txt}")
         p.drawText(QtCore.QRectF(0, rect.height() - 22, rect.width(), 20), QtCore.Qt.AlignCenter, self.label)
+
+
+class TiltPolarWidget(QtWidgets.QWidget):
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None):
+        super().__init__(parent)
+        self.azi: Optional[float] = None
+        self.tilt: Optional[float] = None
+        self.setMinimumSize(180, 140)
+
+    def set_values(self, azi_deg360: Optional[float], tilt_deg: Optional[float]) -> None:
+        self.azi = azi_deg360
+        self.tilt = tilt_deg
+        self.update()
+
+    def paintEvent(self, e: QtGui.QPaintEvent) -> None:
+        p = QtGui.QPainter(self)
+        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        rect = self.rect()
+        cx, cy = rect.width() / 2.0, rect.height() / 2.0
+        radius = min(rect.width(), rect.height()) * 0.40
+        # Outer circle and 90° ring
+        p.setPen(QtGui.QPen(QtGui.QColor('#aaaaaa'), 2))
+        p.drawEllipse(QtCore.QPointF(cx, cy), radius, radius)
+        p.setPen(QtGui.QPen(QtGui.QColor('#666666'), 1, QtCore.Qt.DashLine))
+        p.drawEllipse(QtCore.QPointF(cx, cy), radius, radius)
+        # Vector
+        if self.azi is not None and self.tilt is not None and not math.isnan(self.azi) and not math.isnan(self.tilt):
+            ang = math.radians(90.0 - float(self.azi))
+            tilt_val = float(self.tilt)
+            clamped = max(0.0, min(tilt_val, 90.0))
+            length = (clamped / 90.0) * radius
+            if tilt_val <= 30:
+                color = QtGui.QColor(44, 160, 44)
+            elif tilt_val <= 60:
+                color = QtGui.QColor(255, 191, 0)
+            elif tilt_val <= 90:
+                color = QtGui.QColor(214, 39, 40)
+            else:
+                color = QtGui.QColor(198, 120, 221)
+            x1, y1 = cx + math.cos(ang) * length, cy + math.sin(ang) * length
+            p.setPen(QtGui.QPen(color, 3))
+            p.drawLine(int(cx), int(cy), int(x1), int(y1))
+        # Label
+        p.setPen(QtGui.QPen(QtGui.QColor('#dddddd')))
+        p.drawText(QtCore.QRectF(0, rect.height() - 18, rect.width(), 16), QtCore.Qt.AlignCenter, 'Tilt Polar')
+
+
+class Tilt3DWidget(QtWidgets.QWidget):
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None):
+        super().__init__(parent)
+        try:
+            import pyqtgraph.opengl as gl
+            self._have_gl = True
+            self._gl = gl
+            self.view = gl.GLViewWidget()
+            lay = QtWidgets.QVBoxLayout(self)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(self.view)
+            self.view.opts['distance'] = 4
+            # Axes
+            ax = gl.GLAxisItem(size=QtGui.QVector3D(1,1,1))
+            self.view.addItem(ax)
+            # Rocket direction line
+            self._arrow = gl.GLLinePlotItem(pos=np.array([[0,0,0],[0,0,1]], dtype=np.float32), color=(1,0,0,1), width=2)
+            self.view.addItem(self._arrow)
+        except Exception:
+            self._have_gl = False
+            lab = QtWidgets.QLabel('3D view unavailable')
+            lab.setAlignment(QtCore.Qt.AlignCenter)
+            lay = QtWidgets.QVBoxLayout(self)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(lab)
+        self.azi: Optional[float] = None
+        self.tilt: Optional[float] = None
+
+    def set_values(self, azi_deg360: Optional[float], tilt_deg: Optional[float]) -> None:
+        self.azi = azi_deg360
+        self.tilt = tilt_deg
+        if not self._have_gl or self.azi is None or self.tilt is None:
+            return
+        # Rocket axis vector based on tilt from +Z and azimuth
+        theta = math.radians(float(self.tilt))
+        phi = math.radians(float(self.azi))
+        # Clamp tilt to [0, pi]
+        theta = max(0.0, min(theta, math.pi))
+        vx = math.sin(theta) * math.cos(phi)
+        vy = math.sin(theta) * math.sin(phi)
+        vz = math.cos(theta)
+        pos = np.array([[0,0,0],[vx, vy, vz]], dtype=np.float32)
+        self._arrow.setData(pos=pos)
 
 
 class TextBlock(QtWidgets.QWidget):
@@ -324,12 +434,18 @@ class TextBlock(QtWidgets.QWidget):
 
 
 class FlightVisualizerQt(QtWidgets.QMainWindow):
-    def __init__(self, port: str, baud: int, window: int, fps: int, show_raw: bool, raw_buffer: int, print_raw: bool):
+    def __init__(self, port: str, baud: int, window: int, fps: int, show_raw: bool, raw_buffer: int, print_raw: bool, fast: bool = True, plot_fps: int = 15, components: bool = False, light_theme: bool = False):
         super().__init__()
         self.setWindowTitle("Flight Visualizer (Qt)")
         self.resize(1600, 900)
 
         self.print_raw = bool(print_raw)
+        self.fast = bool(fast)
+        self.components = bool(components)
+        self.light_theme = bool(light_theme)
+        self._updating = False
+        self._last_plot_t = 0.0
+        self._plot_interval = 1.0 / max(1, int(plot_fps))
 
         # Data buffers/state
         self.window = int(window)
@@ -358,6 +474,19 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             ("az_imu1_mps2", None, None),
         ]
         self.metric_data: Dict[str, Deque[float]] = {k: deque(maxlen=self.window) for k, _, _ in self.ts_metrics}
+        # Target x-span (seconds) once buffer reaches full window; then scroll
+        self._x_span_s: Optional[float] = None
+        # Track Y range updates to avoid frequent autoscale thrash
+        self._y_last_update: Dict[str, int] = {}
+        # Previous flags for edge-detect
+        self._prev_flags: Dict[str, Optional[bool]] = {}
+        # Event markers per plot
+        self._event_markers: Dict[str, List[tuple]] = {"agl_fused_m": [], "vz_fused_mps": [], "az_imu1_mps2": []}
+        self._marker_limits = {"liftoff_det": 2, "burnout_det": 2, "tilt_latch": 2, "baro_agree": 1000}
+        self._event_codes = {"liftoff_det": "LIF", "burnout_det": "BO", "tilt_latch": "TLT", "baro_agree": "BAR"}
+        # Component series buffers (for overlays)
+        self.comp_metrics = ["agl_bmp1_m", "agl_imu1_m", "vz_mps", "vz_baro_mps", "vz_acc_mps"]
+        self.comp_data: Dict[str, Deque[float]] = {k: deque(maxlen=self.window) for k in self.comp_metrics}
 
         # ---------------- Layout (stacks) ----------------
         central = QtWidgets.QWidget()
@@ -403,42 +532,132 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         gauges_col.setSpacing(6)
         gauges_col.addWidget(self.batt_gauge)
         gauges_col.addWidget(self.temp_gauge)
+        # Temp sparkline (15s)
+        self.spark_temp = pg.PlotWidget()
+        self._setup_spark(self.spark_temp)
+        self.spark_temp.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.spark_temp.setFixedHeight(32)
+        lbl_temp = QtWidgets.QLabel("Temp (°C) — last 15 s")
+        lbl_temp.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        gauges_col.addWidget(lbl_temp)
+        self._spark_temp_curve = self.spark_temp.plot([], [], pen=pg.mkPen('#ff7f0e', width=1))
+        self._spark_temp_buf: Deque[tuple] = deque(maxlen=1800)
+        gauges_col.addWidget(self.spark_temp)
         top_row.addWidget(gauges_col_widget, 1)
 
         # Column 4: State and Lockout
         self.state_block = TextBlock(["STATE", "LOCKOUT"])  # LOCKOUT shows ON/OFF
         top_row.addWidget(self.state_block, 1)
 
-        # Column 5: Timers
+        # Column 5: Timers + tilt sparkline
+        timers_col_widget = QtWidgets.QWidget()
+        timers_col = QtWidgets.QVBoxLayout(timers_col_widget)
+        timers_col.setContentsMargins(0, 0, 0, 0)
+        timers_col.setSpacing(6)
         self.clock_block = TextBlock(["Alive", "Since liftoff", "To apogee"]) 
-        top_row.addWidget(self.clock_block, 1)
+        timers_col.addWidget(self.clock_block)
+        self.spark_tilt = pg.PlotWidget()
+        self._setup_spark(self.spark_tilt)
+        self.spark_tilt.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.spark_tilt.setFixedHeight(32)
+        lbl_tilt = QtWidgets.QLabel("Tilt (deg) — last 15 s")
+        lbl_tilt.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        timers_col.addWidget(lbl_tilt)
+        self._spark_tilt_curve = self.spark_tilt.plot([], [], pen=pg.mkPen('#1f77b4', width=1))
+        self._spark_tilt_buf: Deque[tuple] = deque(maxlen=1800)
+        timers_col.addWidget(self.spark_tilt)
+        top_row.addWidget(timers_col_widget, 1)
 
         # Column 6: Errors
         self.err_block = TextBlock(["i2c_errs", "spi_errs"]) 
         top_row.addWidget(self.err_block, 1)
 
-        # (Lights are in Column 2; dials stacked in Column 1)
+        # (Polar/3D tilt views removed; keeping only compass)
 
         # Timeseries row using pyqtgraph
         ts_row = QtWidgets.QHBoxLayout()
         ts_row.setSpacing(8)
         root.addLayout(ts_row, stretch=1)
 
-        pg.setConfigOptions(antialias=True, background="#12161c", foreground="#e6e6e6")
+        pg.setConfigOptions(
+            antialias=not self.fast,
+            background="#ffffff" if self.light_theme else "#12161c",
+            foreground="#222222" if self.light_theme else "#e6e6e6",
+        )
+        # Try enabling OpenGL if --fast is set (avoid on macOS due to driver issues)
+        try:
+            if self.fast and not sys.platform.startswith('darwin'):
+                pg.setConfigOptions(useOpenGL=True)
+        except Exception:
+            pass
         self.ts_plots: Dict[str, pg.PlotWidget] = {}
         self.ts_curves: Dict[str, pg.PlotDataItem] = {}
+        display_names = {
+            "agl_fused_m": "Altitude (m)",
+            "vz_fused_mps": "Vertical Velocity (m/s)",
+            "az_imu1_mps2": "Vertical Acceleration (m/s²)",
+        }
+        # component overlay curve refs
+        self.alt_comp_curves: Dict[str, pg.PlotDataItem] = {}
+        self.vel_comp_curves: Dict[str, pg.PlotDataItem] = {}
         for name, ymin, ymax in self.ts_metrics:
             pw = pg.PlotWidget()
             pw.showGrid(x=True, y=True, alpha=0.3)
-            pw.setTitle(name)
-            pw.setLabel("left", name)
-            pw.enableAutoRange(x=False, y=True)
+            pw.setTitle(display_names.get(name, name))
+            pw.setLabel("left", display_names.get(name, name))
+            # We'll manage Y range manually with hysteresis; disable auto-Y
+            pw.enableAutoRange(x=False, y=False)
             if ymin is not None and ymax is not None:
                 pw.setYRange(ymin, ymax)
             curve = pw.plot([], [], pen=pg.mkPen(width=2))
             ts_row.addWidget(pw, 1)
             self.ts_plots[name] = pw
             self.ts_curves[name] = curve
+            if name == "agl_fused_m":
+                leg = pw.addLegend()
+                try:
+                    leg.anchor((1, 0), (1, 0))
+                except Exception:
+                    pass
+                self.ts_curves[name].setPen(pg.mkPen('#00d1ff', width=2))
+                try:
+                    leg.addItem(self.ts_curves[name], "fused")
+                except Exception:
+                    pass
+                # Component curves
+                self.alt_comp_curves["agl_bmp1_m"] = pw.plot([], [], pen=pg.mkPen((255,127,14,180), width=2))
+                self.alt_comp_curves["agl_imu1_m"] = pw.plot([], [], pen=pg.mkPen((148,103,189,180), width=2))
+                if self.components:
+                    try:
+                        leg.addItem(self.alt_comp_curves["agl_bmp1_m"], "baro")
+                        leg.addItem(self.alt_comp_curves["agl_imu1_m"], "imu1")
+                    except Exception:
+                        pass
+                else:
+                    self.alt_comp_curves["agl_bmp1_m"].hide()
+                    self.alt_comp_curves["agl_imu1_m"].hide()
+            elif name == "vz_fused_mps":
+                leg = pw.addLegend()
+                try:
+                    leg.anchor((1, 0), (1, 0))
+                except Exception:
+                    pass
+                self.ts_curves[name].setPen(pg.mkPen('#2ca02c', width=2))
+                try:
+                    leg.addItem(self.ts_curves[name], "fused")
+                except Exception:
+                    pass
+                self.vel_comp_curves["vz_mps"] = pw.plot([], [], pen=pg.mkPen((31,119,180,180), width=2))
+                self.vel_comp_curves["vz_acc_mps"] = pw.plot([], [], pen=pg.mkPen((214,39,40,180), width=2))
+                if self.components:
+                    try:
+                        leg.addItem(self.vel_comp_curves["vz_mps"], "baro/deriv")
+                        leg.addItem(self.vel_comp_curves["vz_acc_mps"], "accel")
+                    except Exception:
+                        pass
+                else:
+                    self.vel_comp_curves["vz_mps"].hide()
+                    self.vel_comp_curves["vz_acc_mps"].hide()
 
         # Raw monitor (collapsible)
         self.raw_visible = bool(show_raw)
@@ -569,6 +788,14 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             except Exception:
                 vf = float('nan')
             self.metric_data[name].append(vf)
+        # Components timeseries (for overlays)
+        for cname in getattr(self, 'comp_metrics', []):
+            v = values.get(cname)
+            try:
+                vf = float(v) if v is not None else float('nan')
+            except Exception:
+                vf = float('nan')
+            self.comp_data[cname].append(vf)
 
         self.raw_lines.append(line)
         if self.raw_visible:
@@ -595,7 +822,31 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         except Exception:
             return None
 
+    def _setup_spark(self, pw: pg.PlotWidget) -> None:
+        pw.setMenuEnabled(False)
+        pw.hideAxis('left')
+        pw.hideAxis('bottom')
+        pw.showGrid(x=False, y=False)
+        pw.setMouseEnabled(x=False, y=False)
+        # Make it look like a mini version of the full plots
+        bg = "#ffffff" if getattr(self, 'light_theme', False) else "#12161c"
+        pw.setBackground(bg)
+        # Add a subtle border to delineate the spark area
+        border = "#cccccc" if getattr(self, 'light_theme', False) else "#444444"
+        try:
+            pw.setStyleSheet(f"border: 1px solid {border}; border-radius: 4px;")
+        except Exception:
+            pass
+        try:
+            vb = pw.getPlotItem().getViewBox()
+            vb.setPadding(0.02)
+        except Exception:
+            pass
+
     def _update_ui(self) -> None:
+        if self._updating:
+            return
+        self._updating = True
         ts = list(self.ts)
         last = dict(self.last)
         flags = dict(self.flags)
@@ -636,23 +887,244 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         act = self._get_float(last.get("act_deg"))
         self.brake_dial.set_values(cmd, act)
 
-        # Compass
+        # Compass + tilt views
         azi = self._get_float(last.get("tilt_az_deg360"))
         tilt = self._get_float(last.get("tilt_deg"))
         self.compass.set_values(azi, tilt)
+        # Polar/3D tilt views removed for simplicity
+
+        # Sparklines (15s window by time)
+        tnow = ts[-1] if ts else 0.0
+        if tilt is not None:
+            self._spark_tilt_buf.append((tnow, tilt))
+        if tc is not None:
+            self._spark_temp_buf.append((tnow, tc))
+        # prune and plot
+        def update_spark(buf: Deque[tuple], curve: pg.PlotDataItem, span_s: float = 15.0):
+            if not buf:
+                return
+            tmax = buf[-1][0]
+            # drop old
+            while buf and (tmax - buf[0][0]) > span_s:
+                buf.popleft()
+            xs = np.array([p[0] for p in buf], dtype=np.float32)
+            ys = np.array([p[1] for p in buf], dtype=np.float32)
+            # shift x to start at 0 for stable ranges
+            xs = xs - xs[0]
+            curve.setData(xs, ys, clipToView=True, downsampleMethod='peak', autoDownsample=True)
+            # keep a fixed-span x range [0, span_s]
+            try:
+                pw = curve.getViewBox().parent()
+            except Exception:
+                pw = None
+            if hasattr(self, 'spark_temp') and (curve is self._spark_temp_curve):
+                try:
+                    self.spark_temp.setXRange(0, span_s, padding=0)
+                except Exception:
+                    pass
+            if hasattr(self, 'spark_tilt') and (curve is self._spark_tilt_curve):
+                try:
+                    self.spark_tilt.setXRange(0, span_s, padding=0)
+                except Exception:
+                    pass
+        # decide whether to do plotting work this tick
+        now = time.monotonic()
+        do_plots = (now - self._last_plot_t) >= self._plot_interval
+        if do_plots:
+            update_spark(self._spark_tilt_buf, self._spark_tilt_curve)
+            update_spark(self._spark_temp_buf, self._spark_temp_curve)
 
         # Timeseries
+        # Establish scrolling span once window is full (when using timestamps)
+        if ts and self._x_span_s is None and len(ts) >= self.window:
+            span = float(ts[-1] - ts[0])
+            if span > 0:
+                self._x_span_s = span
+
         for name, data in self.metric_data.items():
             # Use numpy arrays and enable downsampling/clip-to-view to keep fast
-            if ts and len(ts) == len(data):
-                xx = np.asarray(ts, dtype=float)
-            else:
-                xx = np.arange(len(data), dtype=float)
-            yy = np.asarray(list(data), dtype=float)
-            self.ts_curves[name].setData(xx, yy, autoDownsample=True, clipToView=True)
+            if do_plots:
+                if ts and len(ts) == len(data):
+                    xx = np.asarray(ts, dtype=np.float32)
+                else:
+                    xx = np.arange(len(data), dtype=np.float32)
+                yy = np.asarray(list(data), dtype=np.float32)
+                self.ts_curves[name].setData(xx, yy, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                # Component overlays
+                if self.components:
+                    if name == "agl_fused_m" and self.alt_comp_curves:
+                        b = np.asarray(list(self.comp_data.get("agl_bmp1_m", [])), dtype=np.float32)
+                        i = np.asarray(list(self.comp_data.get("agl_imu1_m", [])), dtype=np.float32)
+                        if b.size:
+                            self.alt_comp_curves["agl_bmp1_m"].show()
+                            self.alt_comp_curves["agl_bmp1_m"].setData(xx[-b.size:], b, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                        if i.size:
+                            self.alt_comp_curves["agl_imu1_m"].show()
+                            self.alt_comp_curves["agl_imu1_m"].setData(xx[-i.size:], i, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                    elif name == "vz_fused_mps" and self.vel_comp_curves:
+                        v1 = np.asarray(list(self.comp_data.get("vz_mps", [])), dtype=np.float32)
+                        if v1.size == 0:
+                            v1 = np.asarray(list(self.comp_data.get("vz_baro_mps", [])), dtype=np.float32)
+                        v2 = np.asarray(list(self.comp_data.get("vz_acc_mps", [])), dtype=np.float32)
+                        if v1.size:
+                            self.vel_comp_curves["vz_mps"].show()
+                            self.vel_comp_curves["vz_mps"].setData(xx[-v1.size:], v1, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                        if v2.size:
+                            self.vel_comp_curves["vz_acc_mps"].show()
+                            self.vel_comp_curves["vz_acc_mps"].setData(xx[-v2.size:], v2, autoDownsample=True, clipToView=True, downsampleMethod='peak')
 
+            # Keep the view showing the active window and scroll after width reached
+            pw = self.ts_plots.get(name)
+            if pw is None:
+                continue
+            if ts and len(ts) == len(data):
+                if self._x_span_s is None:
+                    xmin = float(ts[0]) if ts else 0.0
+                    xmax = float(ts[-1]) if ts else float(self.window)
+                    if xmax <= xmin:
+                        xmax = xmin + 1.0
+                else:
+                    xmax = float(ts[-1])
+                    xmin = xmax - float(self._x_span_s)
+                if do_plots:
+                    pw.setXRange(xmin, xmax, padding=0)
+                # Hysteretic manual Y autoscale to avoid thrash on noisy signals
+                if do_plots:
+                    try:
+                        finite = np.isfinite(yy)
+                        if finite.any():
+                            mn = float(yy[finite].min())
+                            mx = float(yy[finite].max())
+                            if not math.isfinite(mn) or not math.isfinite(mx):
+                                raise ValueError
+                            # Current view Y range
+                            y0, y1 = pw.viewRange()[1]
+                            span = max(1e-3, y1 - y0)
+                            # Update if data exceeds by a margin or every 30 frames
+                            margin = 0.10 * span
+                            needs_expand = (mn < y0 + margin) or (mx > y1 - margin)
+                            needs_periodic = (self._y_last_update.get(name, -1) < 0) or ((self._frame - self._y_last_update.get(name, 0)) >= 30)
+                            if needs_expand or needs_periodic:
+                                # Target range with padding based on data span
+                                dspan = max(1e-3, mx - mn)
+                                pad = max(0.1 * dspan, 0.01)
+                                new_y0 = mn - pad
+                                new_y1 = mx + pad
+                                if new_y1 <= new_y0:
+                                    new_y1 = new_y0 + 1.0
+                                pw.setYRange(new_y0, new_y1, padding=0)
+                                self._y_last_update[name] = self._frame
+                    except Exception:
+                        pass
+            else:
+                n = len(data)
+                if n <= 1:
+                    continue
+                if n < self.window:
+                    xmin, xmax = 0.0, float(n)
+                else:
+                    xmax = float(n)
+                    xmin = float(n - self.window)
+                if do_plots:
+                    pw.setXRange(xmin, xmax, padding=0)
+
+        # Event markers (edges)
+        try:
+            self._update_event_markers(ts, flags)
+        except Exception:
+            pass
+
+        if do_plots:
+            self._last_plot_t = now
         self._frame += 1
         self._prev_ts_len = len(ts)
+        self._updating = False
+
+    # ------------------------------ Events ---------------------------------
+    def _update_event_markers(self, ts: List[float], flags: Dict[str, Optional[bool]]) -> None:
+        if not ts:
+            return
+        x = float(ts[-1])
+        # Detect rising edges
+        events = ["liftoff_det", "burnout_det", "tilt_latch", "baro_agree"]
+        for ev in events:
+            prev = self._prev_flags.get(ev)
+            cur = flags.get(ev)
+            if prev is not None and cur is not None and (not prev) and cur:
+                self._add_marker(ev, x)
+            self._prev_flags[ev] = cur
+        # prune markers outside left bound for each plot
+        for plot_name, markers in self._event_markers.items():
+            pw = self.ts_plots.get(plot_name)
+            if not pw:
+                continue
+            try:
+                xmin, xmax = pw.viewRange()[0]
+            except Exception:
+                xmin = x - 1e9
+            keep = []
+            for line, text, ev in markers:
+                try:
+                    xval = float(line.value())
+                except Exception:
+                    try:
+                        xval = float(line.pos().x())
+                    except Exception:
+                        xval = xmin
+                if xval >= xmin - 1.0:
+                    keep.append((line, text, ev))
+                else:
+                    try:
+                        pw.removeItem(line)
+                        pw.removeItem(text)
+                    except Exception:
+                        pass
+            self._event_markers[plot_name] = keep
+
+    def _add_marker(self, ev: str, x: float) -> None:
+        code = self._event_codes.get(ev, ev[:3].upper())
+        color_map = {
+            "liftoff_det": (255, 255, 0, 160),
+            "burnout_det": (255, 0, 0, 160),
+            "tilt_latch": (255, 165, 0, 160),
+            "baro_agree": (0, 200, 255, 120),
+        }
+        pen = pg.mkPen(color_map.get(ev, (200, 200, 200, 120)), width=1)
+        # Assign plots per event
+        targets = {
+            "liftoff_det": ["agl_fused_m", "vz_fused_mps"],
+            "burnout_det": ["vz_fused_mps", "az_imu1_mps2"],
+            "tilt_latch": ["vz_fused_mps", "az_imu1_mps2"],
+            "baro_agree": ["agl_fused_m"],
+        }.get(ev, ["agl_fused_m"]) 
+        for plot_name in targets:
+            pw = self.ts_plots.get(plot_name)
+            if not pw:
+                continue
+            line = pg.InfiniteLine(pos=x, angle=90, movable=False, pen=pen)
+            pw.addItem(line)
+            text = pg.TextItem(code, anchor=(0, 1))
+            # place near top-right of current view
+            try:
+                (_, _), (ymin, ymax) = pw.viewRange()
+                text.setPos(x, ymax)
+            except Exception:
+                text.setPos(x, 0.0)
+            pw.addItem(text)
+            # retention
+            self._event_markers[plot_name].append((line, text, ev))
+            limit = self._marker_limits.get(ev, 10)
+            if len([m for m in self._event_markers[plot_name] if m[2] == ev]) > limit:
+                # remove oldest of this type
+                for idx, (l, t, e) in enumerate(self._event_markers[plot_name]):
+                    if e == ev:
+                        try:
+                            pw.removeItem(l)
+                            pw.removeItem(t)
+                        except Exception:
+                            pass
+                        del self._event_markers[plot_name][idx]
+                        break
 
     # ------------------------------ Serial ---------------------------------
     def _reload_serial(self) -> None:
@@ -691,15 +1163,39 @@ def main() -> None:
         return
 
     app = QtWidgets.QApplication([])
-    # Dark-ish palette to match matplotlib version
+    # Palette
     pal = app.palette()
-    pal.setColor(QtGui.QPalette.Window, QtGui.QColor("#0c0f14"))
-    pal.setColor(QtGui.QPalette.Base, QtGui.QColor("#12161c"))
-    pal.setColor(QtGui.QPalette.Text, QtGui.QColor("#e6e6e6"))
-    pal.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#e6e6e6"))
+    if getattr(args, 'light', False):
+        pal.setColor(QtGui.QPalette.Window, QtGui.QColor("#f2f2f2"))
+        pal.setColor(QtGui.QPalette.Base, QtGui.QColor("#ffffff"))
+        pal.setColor(QtGui.QPalette.Text, QtGui.QColor("#222222"))
+        pal.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#222222"))
+    else:
+        pal.setColor(QtGui.QPalette.Window, QtGui.QColor("#0c0f14"))
+        pal.setColor(QtGui.QPalette.Base, QtGui.QColor("#12161c"))
+        pal.setColor(QtGui.QPalette.Text, QtGui.QColor("#e6e6e6"))
+        pal.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#e6e6e6"))
     app.setPalette(pal)
 
-    w = FlightVisualizerQt(args.port, args.baud, args.window, args.fps, args.show_raw, args.raw_buffer, args.print_raw)
+    # Fast by default; --high-quality disables, --fast forces on
+    fast = True
+    if getattr(args, 'high_quality', False):
+        fast = False
+    if getattr(args, 'fast', False):
+        fast = True
+    w = FlightVisualizerQt(
+        args.port,
+        args.baud,
+        args.window,
+        args.fps,
+        args.show_raw,
+        args.raw_buffer,
+        args.print_raw,
+        fast=fast,
+        plot_fps=getattr(args, 'plot_fps', 15),
+        components=getattr(args, 'components', False),
+        light_theme=getattr(args, 'light', False),
+    )
     w.show()
 
     # Place window on a specific screen, if requested

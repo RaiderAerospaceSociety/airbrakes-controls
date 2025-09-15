@@ -91,11 +91,17 @@ namespace svc
       uint32_t now = millis();
       if (s_agl_arm_ms == 0)
         s_agl_arm_ms = now + ZERO_AGL_AFTER_MS;
+      // Arm AGL baseline after configured delay, but initialize each sensor's baseline lazily
       if (!s_agl_ready && now >= s_agl_arm_ms)
       {
-        s_base_bmp1_m = bmp_alt;
-        s_base_imu1_m = imu_alt;
         s_agl_ready = true;
+      }
+      if (s_agl_ready)
+      {
+        if (isnan(s_base_bmp1_m) && !isnan(bmp_alt))
+          s_base_bmp1_m = bmp_alt;
+        if (isnan(s_base_imu1_m) && !isnan(imu_alt))
+          s_base_imu1_m = imu_alt;
       }
 
       float agl_bmp1 = NAN, agl_imu1 = NAN, agl_fused = NAN;

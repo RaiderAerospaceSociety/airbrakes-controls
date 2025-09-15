@@ -25,5 +25,5 @@
 
 // Show fusion sub-values (components used by fused outputs)
 #ifndef MON_SHOW_FUSION_PARTS
-#define MON_SHOW_FUSION_PARTS 0
+#define MON_SHOW_FUSION_PARTS 1
 #endif
