@@ -68,6 +68,9 @@ namespace svc
    */
   bool fusionGetAlt(FusedAlt &out);
 
+  /** @brief Request a soft reset of fusion internal state (baselines, filters). */
+  void fusionSoftReset();
+
   // Legacy placeholders
   void fusion_init();
   void fusion_update();

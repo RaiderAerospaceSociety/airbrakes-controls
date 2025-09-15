@@ -53,4 +53,7 @@ namespace svc
   /** Copy latest FC status snapshot. */
   bool fcGetStatus(FcStatus &out);
 
+  /** @brief Reset FC core/state to SAFE and clear flags/timers. */
+  void fcSoftReset();
+
 } // namespace svc

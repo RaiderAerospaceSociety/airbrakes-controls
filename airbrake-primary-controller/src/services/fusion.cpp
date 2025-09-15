@@ -50,6 +50,8 @@ namespace svc
   static FusedImu s_fused_imu = {};
   static FusedAlt s_fused_alt = {};
   static SemaphoreHandle_t s_alt_mutex = nullptr;
+  // async reset request flag
+  static volatile bool s_reset_req = false;
 
   // Baseline state for AGL zeroing
   static bool s_agl_ready = false;
@@ -80,6 +82,33 @@ namespace svc
     static float sos_min_mps = SOS_MIN_FLOOR_MPS;
     for (;;)
     {
+      // Handle async soft reset requests
+      if (s_reset_req)
+      {
+        s_reset_req = false;
+        have_prev_alt = false;
+        prev_alt = NAN;
+        prev_ms = 0;
+        vz_filt = NAN;
+        vz_acc = 0.0f;
+        have_tilt_az = false;
+        tiltAzX = NAN; tiltAzY = NAN;
+        have_tilt_az_acc = false;
+        tilt_az_prev_deg = 0.0f; tilt_az_unwrapped = 0.0f;
+        have_sos_refs = false;
+        sos_ground_mps = NAN; sos_10kft_mps = NAN; sos_min_mps = SOS_MIN_FLOOR_MPS;
+        s_agl_ready = false;
+        s_agl_arm_ms = 0;
+        s_base_bmp1_m = NAN;
+        s_base_imu1_m = NAN;
+        // Clear published snapshot
+        if (!s_alt_mutex)
+          s_alt_mutex = xSemaphoreCreateMutex();
+        if (s_alt_mutex) xSemaphoreTake(s_alt_mutex, portMAX_DELAY);
+        memset(&s_fused_alt, 0, sizeof(s_fused_alt));
+        s_fused_alt.stamp_ms = millis();
+        if (s_alt_mutex) xSemaphoreGive(s_alt_mutex);
+      }
       // Read raw altitudes
       bmp_reading_t b;
       bool vb = bmp1Get(b) && b.valid;
@@ -396,6 +425,11 @@ namespace svc
   {
     out = s_fused_imu;
     return true;
+  }
+
+  void fusionSoftReset()
+  {
+    s_reset_req = true;
   }
 
 } // namespace svc

@@ -446,6 +446,7 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         self._updating = False
         self._last_plot_t = 0.0
         self._plot_interval = 1.0 / max(1, int(plot_fps))
+        self._last_abs_ts_ms: Optional[float] = None
 
         # Data buffers/state
         self.window = int(window)
@@ -672,14 +673,20 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Press P to toggle Raw, R to reload serial")
 
         # Serial
+        self._port_name = port
+        self._baud = baud
         self.ser = QSerialPort(self)
-        self.ser.setPortName(port)
-        self.ser.setBaudRate(baud)
+        self.ser.setPortName(self._port_name)
+        self.ser.setBaudRate(self._baud)
         self.ser.setReadBufferSize(4096)
         self.ser.readyRead.connect(self._on_ready_read)
+        try:
+            self.ser.errorOccurred.connect(self._on_serial_error)
+        except Exception:
+            pass
         self._rx_buf = bytearray()
         if not self.ser.open(QtCore.QIODevice.ReadOnly):
-            QtWidgets.QMessageBox.critical(self, "Serial", f"Failed to open {port}")
+            QtWidgets.QMessageBox.critical(self, "Serial", f"Failed to open {self._port_name}")
 
         # Update timer
         self._frame = 0
@@ -703,7 +710,17 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             self.raw_visible = not self.raw_visible
             self.raw_box.setVisible(self.raw_visible)
         elif k in (QtCore.Qt.Key_R, ):
-            self._reload_serial()
+            # Send soft reset command to MCU, then clear locally
+            try:
+                if self.ser.isOpen():
+                    self.ser.write(b"!cmd:soft_reset\n")
+                    self.ser.flush()
+            except Exception:
+                pass
+            self._reload_serial(clear=True)
+        elif k in (QtCore.Qt.Key_C, ):
+            # Clear all buffers/plots without touching serial
+            self._clear_data()
         else:
             super().keyPressEvent(e)
 
@@ -748,6 +765,13 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             if k.startswith('>'):
                 k = k[1:].strip()
             vs = vs.strip()
+            # Out-of-band events from device
+            if k == "evt":
+                vsl = vs.lower()
+                if vsl in ("soft_reset", "hard_reset"):
+                    self._clear_data()
+                # ignore event pairs in data parsing
+                continue
             if k in ("ts_ms", "ts"):
                 try:
                     ts_ms = float(vs)
@@ -762,40 +786,49 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
             except ValueError:
                 values[k] = vs
 
-        # Update buffers/state
-        if ts_ms is not None:
+        # Only treat as telemetry if timestamp is present (ignore log-only lines)
+        is_telem = (ts_ms is not None)
+
+        # Detect timestamp reset (device reboot) and clear state
+        if is_telem:
+            if self._last_abs_ts_ms is not None and ts_ms + 1000.0 < self._last_abs_ts_ms:
+                self._clear_data()
+            self._last_abs_ts_ms = ts_ms
+
+        # Update buffers/state only for telemetry lines
+        if is_telem:
             if self._t0_ms is None:
                 self._t0_ms = ts_ms
             t = max(0.0, (ts_ms - self._t0_ms) / 1000.0)
-        else:
-            t = (self.ts[-1] + self._dt_guess) if self.ts else 0.0
-        self.ts.append(t)
+            self.ts.append(t)
 
-        self.last.update(values)
-        st = str(self.last.get("fc_state_str", ""))
-        if "lockout" not in values:
-            self.flags["lockout"] = True if st.upper() == "ABORT_LOCKOUT" else False if st else None
-        for name in self.flag_names:
-            if name in values:
+            # Capture latest scalar values
+            self.last.update(values)
+            st = str(self.last.get("fc_state_str", ""))
+            if "lockout" not in values:
+                self.flags["lockout"] = True if st.upper() == "ABORT_LOCKOUT" else False if st else None
+            for name in self.flag_names:
+                if name in values:
+                    try:
+                        self.flags[name] = (float(values[name]) != 0.0)
+                    except Exception:
+                        pass
+            # Timeseries metrics (append only when the line is telemetry)
+            for name in self.metric_data.keys():
+                v = values.get(name)
                 try:
-                    self.flags[name] = (float(values[name]) != 0.0)
+                    vf = float(v) if v is not None else float('nan')
                 except Exception:
-                    pass
-        for name in self.metric_data.keys():
-            v = values.get(name)
-            try:
-                vf = float(v) if v is not None else float('nan')
-            except Exception:
-                vf = float('nan')
-            self.metric_data[name].append(vf)
-        # Components timeseries (for overlays)
-        for cname in getattr(self, 'comp_metrics', []):
-            v = values.get(cname)
-            try:
-                vf = float(v) if v is not None else float('nan')
-            except Exception:
-                vf = float('nan')
-            self.comp_data[cname].append(vf)
+                    vf = float('nan')
+                self.metric_data[name].append(vf)
+            # Components timeseries (for overlays)
+            for cname in getattr(self, 'comp_metrics', []):
+                v = values.get(cname)
+                try:
+                    vf = float(v) if v is not None else float('nan')
+                except Exception:
+                    vf = float('nan')
+                self.comp_data[cname].append(vf)
 
         self.raw_lines.append(line)
         if self.raw_visible:
@@ -957,10 +990,14 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
                         i = np.asarray(list(self.comp_data.get("agl_imu1_m", [])), dtype=np.float32)
                         if b.size:
                             self.alt_comp_curves["agl_bmp1_m"].show()
-                            self.alt_comp_curves["agl_bmp1_m"].setData(xx[-b.size:], b, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                            nb = int(min(len(xx), len(b)))
+                            if nb > 0:
+                                self.alt_comp_curves["agl_bmp1_m"].setData(xx[-nb:], b[-nb:], autoDownsample=True, clipToView=True, downsampleMethod='peak')
                         if i.size:
                             self.alt_comp_curves["agl_imu1_m"].show()
-                            self.alt_comp_curves["agl_imu1_m"].setData(xx[-i.size:], i, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                            ni = int(min(len(xx), len(i)))
+                            if ni > 0:
+                                self.alt_comp_curves["agl_imu1_m"].setData(xx[-ni:], i[-ni:], autoDownsample=True, clipToView=True, downsampleMethod='peak')
                     elif name == "vz_fused_mps" and self.vel_comp_curves:
                         v1 = np.asarray(list(self.comp_data.get("vz_mps", [])), dtype=np.float32)
                         if v1.size == 0:
@@ -968,10 +1005,14 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
                         v2 = np.asarray(list(self.comp_data.get("vz_acc_mps", [])), dtype=np.float32)
                         if v1.size:
                             self.vel_comp_curves["vz_mps"].show()
-                            self.vel_comp_curves["vz_mps"].setData(xx[-v1.size:], v1, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                            n1 = int(min(len(xx), len(v1)))
+                            if n1 > 0:
+                                self.vel_comp_curves["vz_mps"].setData(xx[-n1:], v1[-n1:], autoDownsample=True, clipToView=True, downsampleMethod='peak')
                         if v2.size:
                             self.vel_comp_curves["vz_acc_mps"].show()
-                            self.vel_comp_curves["vz_acc_mps"].setData(xx[-v2.size:], v2, autoDownsample=True, clipToView=True, downsampleMethod='peak')
+                            n2 = int(min(len(xx), len(v2)))
+                            if n2 > 0:
+                                self.vel_comp_curves["vz_acc_mps"].setData(xx[-n2:], v2[-n2:], autoDownsample=True, clipToView=True, downsampleMethod='peak')
 
             # Keep the view showing the active window and scroll after width reached
             pw = self.ts_plots.get(name)
@@ -995,6 +1036,28 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
                         if finite.any():
                             mn = float(yy[finite].min())
                             mx = float(yy[finite].max())
+                            # Include component ranges when enabled so they don't get clipped off-screen
+                            if self.components:
+                                if name == "agl_fused_m":
+                                    b = np.asarray(list(self.comp_data.get("agl_bmp1_m", [])), dtype=np.float32)
+                                    i = np.asarray(list(self.comp_data.get("agl_imu1_m", [])), dtype=np.float32)
+                                    for arr in (b, i):
+                                        if arr.size:
+                                            msk = np.isfinite(arr)
+                                            if msk.any():
+                                                mn = min(mn, float(arr[msk].min()))
+                                                mx = max(mx, float(arr[msk].max()))
+                                elif name == "vz_fused_mps":
+                                    v1 = np.asarray(list(self.comp_data.get("vz_mps", [])), dtype=np.float32)
+                                    if v1.size == 0:
+                                        v1 = np.asarray(list(self.comp_data.get("vz_baro_mps", [])), dtype=np.float32)
+                                    v2 = np.asarray(list(self.comp_data.get("vz_acc_mps", [])), dtype=np.float32)
+                                    for arr in (v1, v2):
+                                        if arr.size:
+                                            msk = np.isfinite(arr)
+                                            if msk.any():
+                                                mn = min(mn, float(arr[msk].min()))
+                                                mx = max(mx, float(arr[msk].max()))
                             if not math.isfinite(mn) or not math.isfinite(mx):
                                 raise ValueError
                             # Current view Y range
@@ -1039,6 +1102,21 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
         self._frame += 1
         self._prev_ts_len = len(ts)
         self._updating = False
+
+    # --------------------------- Serial helpers ---------------------------
+    def _on_serial_error(self, err):
+        # Attempt reconnect on resource errors; leave others
+        try:
+            from PySide6.QtSerialPort import QSerialPort
+            recoverable = err in (
+                QSerialPort.ResourceError,
+                QSerialPort.DeviceNotFoundError,
+                QSerialPort.PermissionError,
+            )
+        except Exception:
+            recoverable = True
+        if recoverable:
+            self._schedule_reconnect()
 
     # ------------------------------ Events ---------------------------------
     def _update_event_markers(self, ts: List[float], flags: Dict[str, Optional[bool]]) -> None:
@@ -1127,16 +1205,98 @@ class FlightVisualizerQt(QtWidgets.QMainWindow):
                         break
 
     # ------------------------------ Serial ---------------------------------
-    def _reload_serial(self) -> None:
+    def _reload_serial(self, clear: bool = False) -> None:
         try:
             if self.ser.isOpen():
                 self.ser.close()
         except Exception:
             pass
         try:
+            if clear:
+                self._clear_data()
+            self.ser.setPortName(self._port_name)
+            self.ser.setBaudRate(self._baud)
             self.ser.open(QtCore.QIODevice.ReadOnly)
         except Exception:
             QtWidgets.QMessageBox.warning(self, "Serial", "Reload failed")
+
+    def _schedule_reconnect(self) -> None:
+        try:
+            if getattr(self, '_reconnect_timer', None) is None:
+                self._reconnect_timer = QtCore.QTimer(self)
+                self._reconnect_timer.setSingleShot(True)
+                self._reconnect_timer.timeout.connect(lambda: self._reload_serial(clear=True))
+            # try reconnect in ~1 second
+            self._reconnect_timer.start(1000)
+        except Exception:
+            pass
+
+    def _clear_data(self) -> None:
+        # Clear timebase and data buffers
+        self._t0_ms = None
+        self._last_abs_ts_ms = None
+        try:
+            self.ts.clear()
+        except Exception:
+            self.ts = deque(maxlen=self.window)
+        for d in self.metric_data.values():
+            d.clear()
+        for d in getattr(self, 'comp_data', {}).values():
+            d.clear()
+        self.last.clear()
+        # Reset flags
+        self.flags = {k: None for k in self.flag_names}
+        self._y_last_update.clear()
+        # Event markers removal
+        try:
+            for plot_name, markers in self._event_markers.items():
+                pw = self.ts_plots.get(plot_name)
+                if not pw:
+                    continue
+                for line, text, _ in markers:
+                    try:
+                        pw.removeItem(line)
+                        pw.removeItem(text)
+                    except Exception:
+                        pass
+                self._event_markers[plot_name] = []
+        except Exception:
+            pass
+        # Clear curves
+        try:
+            for c in self.ts_curves.values():
+                c.setData([], [])
+            for c in getattr(self, 'alt_comp_curves', {}).values():
+                c.setData([], [])
+            for c in getattr(self, 'vel_comp_curves', {}).values():
+                c.setData([], [])
+        except Exception:
+            pass
+        # Reset X ranges to sane defaults
+        try:
+            for pw in self.ts_plots.values():
+                pw.setXRange(0, max(1.0, float(self.window)), padding=0)
+        except Exception:
+            pass
+        # Raw buffers
+        try:
+            self.raw_lines.clear()
+            self._raw_pending.clear()
+            if self.raw_visible:
+                self.raw_box.clear()
+        except Exception:
+            pass
+        # Sparklines
+        try:
+            self._spark_tilt_buf.clear()
+            self._spark_temp_buf.clear()
+            self._spark_tilt_curve.setData([], [])
+            self._spark_temp_curve.setData([], [])
+        except Exception:
+            pass
+        # Frame counters
+        self._frame = 0
+        self._prev_ts_len = 0
 
     def _flush_raw_box(self) -> None:
         if not self.raw_visible or not self._raw_pending:

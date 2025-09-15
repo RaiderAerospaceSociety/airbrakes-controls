@@ -15,6 +15,10 @@
 #include "sensor_imu2.h"
 #include "telemetry.h"
 #include "services/fc.h"
+#include "services/fusion.h"
+#if defined(ARDUINO_ARCH_ESP32)
+#include <esp_system.h>
+#endif
 // !SECTION
 
 //* -- Task --
@@ -24,6 +28,46 @@ static void task_monitor(void *param)
   TickType_t last = xTaskGetTickCount();
   for (;;)
   {
+    // Handle inbound control commands on Serial (newline terminated)
+#if SERIAL_DATA_ENABLE
+    if (Serial.available())
+    {
+      static char cbuf[96];
+      static size_t clen = 0;
+      while (Serial.available())
+      {
+        int ch = Serial.read();
+        if (ch < 0) break;
+        if (ch == '\n' || ch == '\r')
+        {
+          cbuf[clen] = '\0';
+          clen = 0;
+          if (cbuf[0] == '!' && strncmp(cbuf, "!cmd:", 5) == 0)
+          {
+            const char *cmd = cbuf + 5;
+            if (strcasecmp(cmd, "soft_reset") == 0)
+            {
+              svc::fusionSoftReset();
+              svc::fcSoftReset();
+              Serial.println(">evt:soft_reset");
+            }
+            else if (strcasecmp(cmd, "hard_reset") == 0)
+            {
+#if defined(ARDUINO_ARCH_ESP32)
+              Serial.println(">evt:hard_reset");
+              delay(50);
+              esp_restart();
+#endif
+            }
+          }
+        }
+        else if (clen < sizeof(cbuf) - 1)
+        {
+          cbuf[clen++] = (char)ch;
+        }
+      }
+    }
+#endif
     // Fetch data used for monitoring lines
 #if SERIAL_DATA_ENABLE
     TelemetryRecord rec;

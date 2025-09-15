@@ -92,4 +92,16 @@ namespace svc
     return true;
   }
 
+  void fcSoftReset()
+  {
+    if (!s_mutex)
+      s_mutex = xSemaphoreCreateMutex();
+    if (s_mutex) xSemaphoreTake(s_mutex, portMAX_DELAY);
+    memset(&s_stat, 0, sizeof(s_stat));
+    s_stat.state = FC_SAFE;
+    memset(&s_ctx, 0, sizeof(s_ctx));
+    s_core_inited = false; // fc_task will re-init on next iteration
+    if (s_mutex) xSemaphoreGive(s_mutex);
+  }
+
 } // namespace svc
