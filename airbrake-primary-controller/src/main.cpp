@@ -1,4 +1,5 @@
 // ===== Main Application =====
+#ifndef PIN12_PROBE
 // Brief: Initializes board, buses, and starts all tasks.
 // Refs: docs/architecture.md
 //* ===== Includes =====
@@ -19,6 +20,7 @@
 #include "telemetry.h"
 #include "services/fusion.h"
 #include "services/fc.h"
+#include "actuator_servo.h"
 //* ====================
 
 //* ===== Globals =====
@@ -73,6 +75,7 @@ void setup()
   imu2StartTask();
   svc::fusionStartTask();
   svc::fcStartTask();
+  servoStartTask();
   ledStartTask();
   monitorStartTask();
 }
@@ -84,3 +87,4 @@ void loop()
   vTaskDelay(portMAX_DELAY);
 }
 //* ================
+#endif // !PIN12_PROBE

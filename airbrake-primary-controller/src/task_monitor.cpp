@@ -14,7 +14,9 @@
 #include "sensor_imu1.h"
 #include "sensor_imu2.h"
 #include "telemetry.h"
+#include "actuator_servo.h"
 #include "services/fc.h"
+#include "config/actuators_config.h"
 #include "services/fusion.h"
 #if defined(ARDUINO_ARCH_ESP32)
 #include <esp_system.h>
@@ -141,6 +143,15 @@ static void task_monitor(void *param)
     kv_f("tilt_deg", fu.tilt_deg, 2);
     kv_f("tilt_az_deg360", fu.tilt_az_deg360, 1);
     kv_f("mach_cons", fu.mach_cons, 4);
+    // Servo status (if enabled)
+#if SERVO_ENABLE
+    extern ServoStatus servoGetStatus();
+    ServoStatus sv = servoGetStatus();
+    kv_i("servo_open", sv.open ? 1 : 0);
+    kv_i("servo_cmd_us", (int32_t)sv.cmd_us);
+    kv_i("servo_min_us", (int32_t)sv.min_us);
+    kv_i("servo_max_us", (int32_t)sv.max_us);
+#endif
     // Optional fusion sub-values for verification
 #if MON_SHOW_FUSION_PARTS
     kv_f("agl_fused_m", fu.agl_fused_m, 3);
